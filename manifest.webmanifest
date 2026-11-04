@@ -1,1 +1,10 @@
-{"name":"JARVIS Personal Assistant","short_name":"JARVIS","start_url":"./","scope":"./","display":"standalone","background_color":"#07111f","theme_color":"#07111f","description":"Panel personal JARVIS"}
+{
+  "name": "JARVIS — Asistente personal",
+  "short_name": "JARVIS",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "description": "Asistente personal JARVIS en español"
+}
