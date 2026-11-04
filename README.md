@@ -41,3 +41,24 @@ Se ha añadido un flujo de GitHub Actions para publicar el sitio automáticament
 3. Conexiones con servicios externos mediante permisos limitados.
 4. Recordatorios fiables y automatizaciones en segundo plano.
 5. Aplicación complementaria para funciones nativas de Android o escritorio.
+
+## Conexión de IA con Gemini (preparada)
+
+El chat ya está preparado para usar un Worker seguro de Cloudflare. La clave de Gemini **no** debe guardarse en GitHub ni en `app.js`.
+
+### Desplegar el servidor
+
+1. En Cloudflare, abre **Workers & Pages → Create application → Import a repository** y conecta el repositorio `lekramelpro-debug/Mi-jarvis`.
+2. Usa la raíz del repositorio como directorio. No hace falta un comando de compilación; el archivo de configuración `wrangler.toml` ya indica `worker.js`.
+3. Despliega el Worker. Cloudflare mostrará una dirección `https://…workers.dev`.
+4. En el Worker, abre **Settings → Variables and Secrets → Add → Secret**. Nombre: `GEMINI_API_KEY`. Valor: la clave creada en Google AI Studio. Guarda y vuelve a desplegar si Cloudflare lo solicita.
+5. La dirección del Worker se debe configurar en `AI_ENDPOINT` dentro de `app.js`. No pegues la clave de Gemini en ese archivo.
+
+El Worker solo acepta solicitudes desde el dominio GitHub Pages de este proyecto, limita el tamaño de los mensajes y mantiene la clave en un secreto de Cloudflare. La restricción de origen ayuda a reducir usos desde otras webs, pero no equivale a autenticación ni a un límite de gasto; revisa el uso y los límites de la cuenta.
+
+### Uso y privacidad
+
+- Gemini tiene una modalidad gratuita con límites y disponibilidad de modelos sujeta a cambios. No actives facturación para esta configuración.
+- En el nivel gratuito, Google indica que el contenido puede utilizarse para mejorar sus productos. No envíes contraseñas, claves, datos privados ni información sensible.
+- Si se alcanza el límite gratuito, JARVIS mostrará un aviso y habrá que esperar a que se restablezca.
+- Las conversaciones guardadas localmente pueden enviarse a Gemini como contexto para continuar la conversación. Desactiva el guardado del chat si no quieres conservarlas en ese navegador.
