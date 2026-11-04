@@ -49,7 +49,7 @@ export default {
         body: JSON.stringify({
           system_instruction: { parts: [{ text: system }] },
           contents,
-          generationConfig: { temperature: 0.7, maxOutputTokens: 700 }
+          generationConfig: { maxOutputTokens: 700 }
         })
       });
     } catch {
