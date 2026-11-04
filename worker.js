@@ -1,5 +1,5 @@
 const ALLOWED_ORIGIN = "https://lekramelpro-debug.github.io";
-const MODEL = "gemini-3.5-flash";
+const MODEL = "gemini-3.8-flash";
 
 function cors(origin) {
   return {
