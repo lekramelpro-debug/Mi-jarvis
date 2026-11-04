@@ -26,20 +26,39 @@ $("importFile").addEventListener("change",async e=>{const file=e.target.files?.[
 $("searchForm").addEventListener("submit",e=>{e.preventDefault();const q=$("searchInput").value.trim();if(q)window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener,noreferrer")});
 function addTask(text,priority="Normal",due=""){const tasks=read(KEYS.tasks);tasks.push({text,priority,done:false,due,created:new Date().toISOString()});write(KEYS.tasks,tasks);renderTasks()}
 function addNote(text){const notes=read(KEYS.notes);notes.unshift({text,created:new Date().toISOString()});write(KEYS.notes,notes);renderMemory()}
-function processCommand(raw){const text=raw.trim();if(!text)return;say(text,"user");const low=text.toLocaleLowerCase("es");let reply="";
-let m=text.match(/^(?:añade|agrega|crea|apunta|recuerda(?:me)?)\s+(?:una\s+)?tarea\s+(?:de\s+)?(.+)/i);
-if(m){addTask(m[1]);reply="He añadido la tarea: "+m[1]+"."}
-else if((m=text.match(/^(?:guarda|anota|recuerda)\s+(?:que\s+)?(.+)/i))){addNote(m[1]);reply="He guardado en memoria: "+m[1]+"."}
-else if(/^(?:busca|investiga|buscar)\s+(.+)/i.test(text)){const q=text.replace(/^(?:busca|investiga|buscar)\s+/i,"");window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener,noreferrer");reply="He abierto una búsqueda sobre: "+q+"."}
-else if(/^(?:abre|inicia)\s+(calendar|calendario|drive|gmail|correo)/i.test(text)){const app=text.match(/(calendar|calendario|drive|gmail|correo)/i)[0].toLowerCase();const urls={calendar:"https://calendar.google.com/",calendario:"https://calendar.google.com/",drive:"https://drive.google.com/",gmail:"https://mail.google.com/",correo:"https://mail.google.com/"};window.open(urls[app],"_blank","noopener,noreferrer");reply="Abriendo "+app+"."}
-else if(/qué tareas|mis tareas|pendientes/.test(low)){const p=read(KEYS.tasks).filter(t=>!t.done);reply=p.length?"Tienes "+p.length+" tareas pendientes: "+p.map(t=>t.text+(t.due?" (fecha "+t.due+")":"")).join("; "):"No tienes tareas pendientes."}
-else if(/qué recuerdas|mis notas|qué sabes|memoria/.test(low)){const n=read(KEYS.notes);reply=n.length?"Tienes "+n.length+" notas guardadas. La más reciente dice: "+n[0].text:"Todavía no tienes notas guardadas."}
-else if(/qué hora|dime la hora/.test(low)){reply="Son las "+new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})+"."}
-else if(/qué fecha|qué día es|fecha de hoy/.test(low)){reply="Hoy es "+new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+"."}
-else if(/ayuda|qué puedes hacer|comandos/.test(low)){reply="Puedo añadir tareas («añade tarea estudiar»), guardar notas («recuerda que...»), consultar tus tareas y notas, decirte la hora y fecha, abrir Google, Calendar, Drive o Gmail, y hablar en voz alta. Aún no tengo conectada una IA general."}
-else if(/hola|buenos días|buenas/.test(low)){reply="Hola. Estoy operativo en modo local. ¿Qué organizamos hoy?"}
-else{reply="He recibido tu mensaje, pero todavía no tengo conectada una inteligencia artificial capaz de responder libremente. Escribe «ayuda» para ver los comandos disponibles."}
-say(reply);speak(reply)}
+const AI_ENDPOINT = ""; // Se rellenará con la URL pública del Worker después de desplegarlo.
+async function askJarvis(text){
+  if(!AI_ENDPOINT)return "La conexión inteligente ya está preparada en el código, pero falta publicar el servidor seguro de Cloudflare y conectarlo. Tus tareas y notas siguen funcionando.";
+  const history=read(KEYS.chat).slice(-14).map(m=>({role:m.who==="assistant"?"model":"user",text:String(m.text||"").slice(0,1600)}));
+  if(!history.length||history[history.length-1].role!=="user"||history[history.length-1].text!==text)history.push({role:"user",text});
+  try{
+    const response=await fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||"No se pudo obtener respuesta.");
+    if(typeof data.reply!=="string"||!data.reply.trim())throw new Error("La IA no ha devuelto una respuesta.");
+    return data.reply.trim();
+  }catch(error){
+    return error.message||"No he podido conectar con mi inteligencia artificial. Comprueba la conexión e inténtalo de nuevo.";
+  }
+}
+async function processCommand(raw){
+  const text=raw.trim();if(!text)return;say(text,"user");
+  const low=text.toLocaleLowerCase("es");let reply="";let useAI=false;
+  let m=text.match(/^(?:añade|agrega|crea|apunta|recuerda(?:me)?)\\s+(?:una\\s+)?tarea\\s+(?:de\\s+)?(.+)/i);
+  if(m){addTask(m[1]);reply="He añadido la tarea: "+m[1]+"."}
+  else if((m=text.match(/^(?:guarda|anota|recuerda)\\s+(?:que\\s+)?(.+)/i))){addNote(m[1]);reply="He guardado en memoria: "+m[1]+"."}
+  else if(/^(?:busca|investiga|buscar)\\s+(.+)/i.test(text)){const q=text.replace(/^(?:busca|investiga|buscar)\\s+/i,"");window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener,noreferrer");reply="He abierto una búsqueda sobre: "+q+"."}
+  else if(/^(?:abre|inicia)\\s+(calendar|calendario|drive|gmail|correo)/i.test(text)){const app=text.match(/(calendar|calendario|drive|gmail|correo)/i)[0].toLowerCase();const urls={calendar:"https://calendar.google.com/",calendario:"https://calendar.google.com/",drive:"https://drive.google.com/",gmail:"https://mail.google.com/",correo:"https://mail.google.com/"};window.open(urls[app],"_blank","noopener,noreferrer");reply="Abriendo "+app+"."}
+  else if(/qué tareas|mis tareas|pendientes/.test(low)){const p=read(KEYS.tasks).filter(t=>!t.done);reply=p.length?"Tienes "+p.length+" tareas pendientes: "+p.map(t=>t.text+(t.due?" (fecha "+t.due+")":"")).join("; "):"No tienes tareas pendientes."}
+  else if(/qué recuerdas|mis notas|qué sabes|memoria/.test(low)){const n=read(KEYS.notes);reply=n.length?"Tienes "+n.length+" notas guardadas. La más reciente dice: "+n[0].text:"Todavía no tienes notas guardadas."}
+  else if(/qué hora|dime la hora/.test(low)){reply="Son las "+new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})+"."}
+  else if(/qué fecha|qué día es|fecha de hoy/.test(low)){reply="Hoy es "+new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+"."}
+  else if(/ayuda|qué puedes hacer|comandos/.test(low)){reply="Puedo conversar contigo cuando esté conectada la IA, añadir tareas («añade tarea estudiar»), guardar notas («recuerda que...»), consultar tareas y notas, decirte la hora y fecha y abrir Google, Calendar, Drive o Gmail."}
+  else if(/hola|buenos días|buenas/.test(low)){useAI=true}
+  else{useAI=true}
+  if(useAI)reply=await askJarvis(text);
+  say(reply);speak(reply);
+}
 $("chatForm").addEventListener("submit",e=>{e.preventDefault();processCommand($("chatInput").value);$("chatInput").value=""});
 $("focusInputBtn").addEventListener("click",()=>$("chatInput").focus());
 $("voiceBtn").addEventListener("click",()=>{const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition){say("El reconocimiento de voz no está disponible en este navegador. Puedes escribir en el chat.");return}const rec=new Recognition();rec.lang="es-ES";rec.interimResults=false;rec.maxAlternatives=1;rec.onstart=()=>$("systemState").textContent="ESCUCHANDO";rec.onresult=e=>processCommand(e.results[0][0].transcript);rec.onerror=()=>say("No he podido reconocer la voz. Comprueba los permisos del micrófono.");rec.onend=()=>$("systemState").textContent="SISTEMA LOCAL ACTIVO";try{rec.start()}catch{say("El micrófono ya está activo o el navegador no permite iniciar el reconocimiento.")}});
