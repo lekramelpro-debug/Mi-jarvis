@@ -1,4 +1,4 @@
-/* JARVIS 0.5 — memoria contextual, voz y recordatorios locales */
+/* JARVIS 0.7 — memoria contextual, voz y recordatorios locales */
 "use strict";
 
 const $ = id => document.getElementById(id);
