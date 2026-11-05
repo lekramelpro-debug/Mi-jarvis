@@ -372,6 +372,23 @@ function dueDescription(value) {
   return formatDue(value).replace(" · ", " a las ");
 }
 
+function buildCalendarIntent(title, startDate) {
+  const start = new Date(startDate);
+  if (Number.isNaN(start.getTime())) return false;
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const encode = value => encodeURIComponent(String(value)).replace(/'/g, "%27");
+  const intent = "intent://calendar/events#Intent" +
+    ";scheme=content" +
+    ";action=android.intent.action.INSERT" +
+    ";type=vnd.android.cursor.item/event" +
+    ";S.title=" + encode(title) +
+    ";l.beginTime=" + start.getTime() +
+    ";l.endTime=" + end.getTime() +
+    ";end";
+  window.location.href = intent;
+  return true;
+}
+
 const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
 
 function syncRecordKey(item, kind) {
@@ -540,7 +557,21 @@ async function processCommand(raw) {
   let useAI = false;
   let match;
 
-  match = text.match(/^(?:recuérdame|recuerdame|avísame|avisame)\s+(.+)/i);
+  match = text.match(/^(?:agéndame|agendame|agenda|programa|añade al calendario|anota en el calendario)\\s+(.+)/i);
+  if (match) {
+    const schedule = extractSchedule(match[1], false);
+    const hasClearTime = schedule.hasTime;
+    if (!schedule.hasDate || !hasClearTime) {
+      reply = "Puedo preparar el evento en el calendario de tu Samsung. Dime el día y la hora exactos, por ejemplo: «agenda una cita mañana a las 18:00».";
+    } else {
+      const title = (schedule.text || "Cita").replace(/^(?:una\\s+)?(?:cita|reunión|reunion|evento)\\s*/i, "").trim() || "Cita";
+      if (buildCalendarIntent(title, schedule.due)) {
+        reply = "He preparado «" + title + "» para " + dueDescription(schedule.due) + ". Android abrirá la aplicación de calendario disponible. Revisa los datos y pulsa Guardar; el evento no se añade hasta que lo confirmes allí.";
+      } else {
+        reply = "No he podido preparar el evento. Comprueba la fecha y la hora.";
+      }
+    }
+  } else if ((match = text.match(/^(?:recuérdame|recuerdame|avísame|avisame)\\s+(.+)/i)))
   if (match) {
     const schedule = extractSchedule(match[1], true);
     const taskText = schedule.text || "Recordatorio";
@@ -593,7 +624,7 @@ async function processCommand(raw) {
       year: "numeric"
     }) + ".";
   } else if (/ayuda|qué puedes hacer|comandos/.test(low)) {
-    reply = "Puedo conversar contigo, guardar notas («recuerda que...»), consultar tu memoria, añadir tareas («añade tarea estudiar inglés»), programar avisos («recuérdame estudiar mañana a las 18:00»), consultar pendientes, decirte la hora y fecha y abrir Google Calendar, Drive o Gmail. También puedo responder por voz si está activado.";
+    reply = "Puedo conversar contigo, guardar notas, gestionar tareas y recordatorios, consultar pendientes y preparar eventos para tu calendario Android. En el móvil, revisa el evento y pulsa Guardar para confirmarlo. También puedo responder por voz si está activado.";
   } else {
     useAI = true;
   }
