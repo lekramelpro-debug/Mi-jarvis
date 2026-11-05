@@ -1,73 +1,669 @@
-/* JARVIS 0.3 — asistente local en español */
+/* JARVIS 0.5 — memoria contextual, voz y recordatorios locales */
 "use strict";
+
 const $ = id => document.getElementById(id);
-const KEYS = {notes:"jarvis-v3-notes",tasks:"jarvis-v3-tasks",chat:"jarvis-v3-chat",settings:"jarvis-v3-settings"};
-const safeRead=(key,fallback)=>{try{const v=JSON.parse(localStorage.getItem(key));return v??fallback}catch{return fallback}};
-const read=(key,fallback=[])=>{const v=safeRead(key,fallback);return Array.isArray(v)?v:fallback};
-const write=(key,value)=>{try{localStorage.setItem(key,JSON.stringify(value));return true}catch{return false}};
-const safeText=(tag,text,className)=>{const n=document.createElement(tag);n.textContent=String(text??"");if(className)n.className=className;return n};
-const settings=Object.assign({voiceReplies:true,saveChat:true},safeRead(KEYS.settings,{}));
-function saveSettings(){write(KEYS.settings,settings)}
-function speak(text){if(!settings.voiceReplies||!("speechSynthesis"in window))return;window.speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="es-ES";window.speechSynthesis.speak(u)}
-function say(text,who="assistant",persist=true){const row=safeText("div","","message "+who);row.append(safeText("b",who==="assistant"?"JARVIS":"TÚ"));row.append(safeText("p",text));$("chatLog").append(row);$("chatLog").scrollTop=$("chatLog").scrollHeight;if(persist&&settings.saveChat){const history=read(KEYS.chat);history.push({text,who,at:new Date().toISOString()});write(KEYS.chat,history.slice(-60))}}
-function restoreChat(){if(!settings.saveChat)return;read(KEYS.chat).forEach(m=>say(m.text,m.who,false))}
-function setView(name){document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="view-"+name));document.querySelectorAll(".nav").forEach(b=>b.classList.toggle("active",b.dataset.view===name));const titles={home:"Centro de mando",memory:"Memoria",tasks:"Mis tareas",research:"Investigación",tools:"Herramientas"};$("pageTitle").textContent=titles[name]||"JARVIS"}
-document.querySelectorAll(".nav").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.view)));
-document.querySelectorAll("[data-go]").forEach(b=>b.addEventListener("click",()=>setView(b.dataset.go)));
-function renderMemory(){const list=$("memoryList");list.replaceChildren();const notes=read(KEYS.notes);$("memoryCount").textContent=notes.length;if(!notes.length){list.append(safeText("p","Todavía no hay notas guardadas.","empty"));return}notes.forEach((item,i)=>{const row=safeText("div","","data-item");row.append(safeText("span",item.text,"item-text"));row.append(safeText("small",new Date(item.created).toLocaleDateString("es-ES")));const del=safeText("button","Borrar","delete-btn");del.addEventListener("click",()=>{const a=read(KEYS.notes);a.splice(i,1);write(KEYS.notes,a);renderMemory()});row.append(del);list.append(row)})}
-function renderTasks(){const list=$("taskList"),tasks=read(KEYS.tasks);list.replaceChildren();const pending=tasks.filter(t=>!t.done);$("taskCount").textContent=pending.length;$("taskSummary").textContent=pending.length+" pendientes";$("homeTasks").replaceChildren();if(!tasks.length)list.append(safeText("p","Todavía no tienes tareas.","empty"));tasks.forEach((t,i)=>{const row=safeText("div","","data-item"+(t.done?" done":""));const check=document.createElement("input");check.type="checkbox";check.checked=!!t.done;check.setAttribute("aria-label","Marcar tarea como completada");check.addEventListener("change",()=>{const a=read(KEYS.tasks);a[i].done=check.checked;write(KEYS.tasks,a);renderTasks()});row.append(check);const label=safeText("span",t.text,"item-text");label.append(safeText("small","Prioridad: "+(t.priority||"Normal")+(t.due?" · Fecha: "+new Date(t.due+"T12:00:00").toLocaleDateString("es-ES"):"")));row.append(label);const del=safeText("button","Borrar","delete-btn");del.addEventListener("click",()=>{const a=read(KEYS.tasks);a.splice(i,1);write(KEYS.tasks,a);renderTasks()});row.append(del);list.append(row)});pending.slice(0,4).forEach(t=>$("homeTasks").append(safeText("div",t.text+(t.due?" · "+new Date(t.due+"T12:00:00").toLocaleDateString("es-ES"):""),"compact-item")));if(!pending.length)$("homeTasks").append(safeText("p","No tienes tareas pendientes.","empty"))}
-function renderAll(){renderTasks();renderMemory()}
-$("memoryForm").addEventListener("submit",e=>{e.preventDefault();const text=$("memoryInput").value.trim();if(!text)return;const notes=read(KEYS.notes);notes.unshift({text,created:new Date().toISOString()});write(KEYS.notes,notes);$("memoryInput").value="";renderMemory();say("He guardado esa nota en la memoria de este dispositivo.");});
-$("taskForm").addEventListener("submit",e=>{e.preventDefault();const text=$("taskInput").value.trim();if(!text)return;const tasks=read(KEYS.tasks);tasks.push({text,priority:$("taskPriority").value,done:false,due:$("taskDate").value||"",created:new Date().toISOString()});write(KEYS.tasks,tasks);$("taskInput").value="";$("taskDate").value="";renderTasks();});
-function download(name,data){const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
-$("exportMemory").addEventListener("click",()=>download("jarvis-memoria.json",read(KEYS.notes)));
-$("exportAll").addEventListener("click",()=>download("jarvis-copia-seguridad.json",{version:3,notes:read(KEYS.notes),tasks:read(KEYS.tasks),chat:read(KEYS.chat),exportedAt:new Date().toISOString()}));
-$("importFile").addEventListener("change",async e=>{const file=e.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(!data||!Array.isArray(data.notes)||!Array.isArray(data.tasks))throw new Error("Formato no válido");if(!confirm("La importación sustituirá las notas y tareas actuales de este navegador. ¿Continuar?"))return;write(KEYS.notes,data.notes);write(KEYS.tasks,data.tasks);if(Array.isArray(data.chat))write(KEYS.chat,data.chat);$("chatLog").replaceChildren();restoreChat();renderAll();say("Copia de seguridad importada correctamente.");}catch(err){alert("No se pudo importar el archivo. Comprueba que sea una copia de JARVIS válida.")}finally{e.target.value=""}});
-$("searchForm").addEventListener("submit",e=>{e.preventDefault();const q=$("searchInput").value.trim();if(q)window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener,noreferrer")});
-function addTask(text,priority="Normal",due=""){const tasks=read(KEYS.tasks);tasks.push({text,priority,done:false,due,created:new Date().toISOString()});write(KEYS.tasks,tasks);renderTasks()}
-function addNote(text){const notes=read(KEYS.notes);notes.unshift({text,created:new Date().toISOString()});write(KEYS.notes,notes);renderMemory()}
-const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
-async function askJarvis(text){
-  if(!AI_ENDPOINT)return "La conexión inteligente ya está preparada en el código, pero falta publicar el servidor seguro de Cloudflare y conectarlo. Tus tareas y notas siguen funcionando.";
-  const history=read(KEYS.chat).slice(-14).map(m=>({role:m.who==="assistant"?"model":"user",text:String(m.text||"").slice(0,1600)}));
-  if(!history.length||history[history.length-1].role!=="user"||history[history.length-1].text!==text)history.push({role:"user",text});
-  try{
-    const response=await fetch(AI_ENDPOINT,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:history})});
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok)throw new Error(data.error||"No se pudo obtener respuesta.");
-    if(typeof data.reply!=="string"||!data.reply.trim())throw new Error("La IA no ha devuelto una respuesta.");
-    return data.reply.trim();
-  }catch(error){
-    return error.message||"No he podido conectar con mi inteligencia artificial. Comprueba la conexión e inténtalo de nuevo.";
+const KEYS = {
+  notes: "jarvis-v3-notes",
+  tasks: "jarvis-v3-tasks",
+  chat: "jarvis-v3-chat",
+  settings: "jarvis-v3-settings"
+};
+
+const safeRead = (key, fallback) => {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return value ?? fallback;
+  } catch {
+    return fallback;
+  }
+};
+const read = (key, fallback = []) => {
+  const value = safeRead(key, fallback);
+  return Array.isArray(value) ? value : fallback;
+};
+const write = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+};
+const safeText = (tag, text, className) => {
+  const node = document.createElement(tag);
+  node.textContent = String(text ?? "");
+  if (className) node.className = className;
+  return node;
+};
+
+const settings = Object.assign(
+  { voiceReplies: true, saveChat: true, shareMemoryWithAI: false },
+  safeRead(KEYS.settings, {})
+);
+
+function saveSettings() {
+  write(KEYS.settings, settings);
+}
+
+function speak(text) {
+  if (!settings.voiceReplies || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "es-ES";
+  window.speechSynthesis.speak(utterance);
+}
+
+function say(text, who = "assistant", persist = true) {
+  const row = safeText("div", "", "message " + who);
+  row.append(safeText("b", who === "assistant" ? "JARVIS" : "TÚ"));
+  row.append(safeText("p", text));
+  $("chatLog").append(row);
+  $("chatLog").scrollTop = $("chatLog").scrollHeight;
+
+  if (persist && settings.saveChat) {
+    const history = read(KEYS.chat);
+    history.push({ text, who, at: new Date().toISOString() });
+    write(KEYS.chat, history.slice(-60));
   }
 }
-async function processCommand(raw){
-  const text=raw.trim();if(!text)return;say(text,"user");
-  const low=text.toLocaleLowerCase("es");let reply="";let useAI=false;
-  let m=text.match(/^(?:añade|agrega|crea|apunta|recuerda(?:me)?)\s+(?:una\s+)?tarea\s+(?:de\s+)?(.+)/i);
-  if(m){addTask(m[1]);reply="He añadido la tarea: "+m[1]+"."}
-  else if((m=text.match(/^(?:guarda|anota|recuerda)\s+(?:que\s+)?(.+)/i))){addNote(m[1]);reply="He guardado en memoria: "+m[1]+"."}
-  else if(/^(?:busca|investiga|buscar)\s+(.+)/i.test(text)){const q=text.replace(/^(?:busca|investiga|buscar)\s+/i,"");window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener,noreferrer");reply="He abierto una búsqueda sobre: "+q+"."}
-  else if(/^(?:abre|inicia)\s+(calendar|calendario|drive|gmail|correo)/i.test(text)){const app=text.match(/(calendar|calendario|drive|gmail|correo)/i)[0].toLowerCase();const urls={calendar:"https://calendar.google.com/",calendario:"https://calendar.google.com/",drive:"https://drive.google.com/",gmail:"https://mail.google.com/",correo:"https://mail.google.com/"};window.open(urls[app],"_blank","noopener,noreferrer");reply="Abriendo "+app+"."}
-  else if(/qué tareas|mis tareas|pendientes/.test(low)){const p=read(KEYS.tasks).filter(t=>!t.done);reply=p.length?"Tienes "+p.length+" tareas pendientes: "+p.map(t=>t.text+(t.due?" (fecha "+t.due+")":"")).join("; "):"No tienes tareas pendientes."}
-  else if(/qué recuerdas|mis notas|qué sabes|memoria/.test(low)){const n=read(KEYS.notes);reply=n.length?"Tienes "+n.length+" notas guardadas. La más reciente dice: "+n[0].text:"Todavía no tienes notas guardadas."}
-  else if(/qué hora|dime la hora/.test(low)){reply="Son las "+new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})+"."}
-  else if(/qué fecha|qué día es|fecha de hoy/.test(low)){reply="Hoy es "+new Date().toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long",year:"numeric"})+"."}
-  else if(/ayuda|qué puedes hacer|comandos/.test(low)){reply="Puedo conversar contigo cuando esté conectada la IA, añadir tareas («añade tarea estudiar»), guardar notas («recuerda que...»), consultar tareas y notas, decirte la hora y fecha y abrir Google, Calendar, Drive o Gmail."}
-  else if(/hola|buenos días|buenas/.test(low)){useAI=true}
-  else{useAI=true}
-  if(useAI)reply=await askJarvis(text);
-  say(reply);speak(reply);
+
+function restoreChat() {
+  if (!settings.saveChat) return;
+  read(KEYS.chat).forEach(message => say(message.text, message.who, false));
 }
-$("chatForm").addEventListener("submit",e=>{e.preventDefault();processCommand($("chatInput").value);$("chatInput").value=""});
-$("focusInputBtn").addEventListener("click",()=>$("chatInput").focus());
-$("voiceBtn").addEventListener("click",()=>{const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;if(!Recognition){say("El reconocimiento de voz no está disponible en este navegador. Puedes escribir en el chat.");return}const rec=new Recognition();rec.lang="es-ES";rec.interimResults=false;rec.maxAlternatives=1;rec.onstart=()=>$("systemState").textContent="ESCUCHANDO";rec.onresult=e=>processCommand(e.results[0][0].transcript);rec.onerror=()=>say("No he podido reconocer la voz. Comprueba los permisos del micrófono.");rec.onend=()=>$("systemState").textContent="SISTEMA LOCAL ACTIVO";try{rec.start()}catch{say("El micrófono ya está activo o el navegador no permite iniciar el reconocimiento.")}});
-$("voiceReplies").checked=settings.voiceReplies;$("saveChat").checked=settings.saveChat;
-$("voiceReplies").addEventListener("change",e=>{settings.voiceReplies=e.target.checked;saveSettings();if(!settings.voiceReplies&&"speechSynthesis"in window)window.speechSynthesis.cancel()});
-$("saveChat").addEventListener("change",e=>{settings.saveChat=e.target.checked;if(!settings.saveChat){localStorage.removeItem(KEYS.chat);$("chatLog").replaceChildren();say("La conversación ya no se guardará en este dispositivo.", "assistant",false)}saveSettings()});
-$("clearChat").addEventListener("click",()=>{if(!confirm("¿Borrar el historial de conversación de este dispositivo?"))return;localStorage.removeItem(KEYS.chat);$("chatLog").replaceChildren();say("Conversación borrada.", "assistant",false)});
-$("enableNotifications").addEventListener("click",async()=>{if(!("Notification"in window)){say("Este navegador no admite notificaciones.");return}const permission=await Notification.requestPermission();say(permission==="granted"?"Notificaciones activadas. Solo se mostrarán cuando JARVIS esté abierto y programe un aviso compatible.":"No se han concedido permisos de notificación.")});
-function updateClock(){$("clock").textContent=new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}updateClock();setInterval(updateClock,30000);
-restoreChat();renderAll();
-let installPrompt=null;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installPrompt=e;$("installBtn").hidden=false});$("installBtn").addEventListener("click",async()=>{if(!installPrompt)return;installPrompt.prompt();await installPrompt.userChoice;installPrompt=null;$("installBtn").hidden=true});
-if("serviceWorker"in navigator&&location.protocol.startsWith("http"))window.addEventListener("load",()=>navigator.serviceWorker.register("./service-worker.js").catch(()=>{}));
+
+function setView(name) {
+  document.querySelectorAll(".view").forEach(view => {
+    view.classList.toggle("active", view.id === "view-" + name);
+  });
+  document.querySelectorAll(".nav").forEach(button => {
+    button.classList.toggle("active", button.dataset.view === name);
+  });
+  const titles = {
+    home: "Centro de mando",
+    memory: "Memoria",
+    tasks: "Mis tareas",
+    research: "Investigación",
+    tools: "Herramientas"
+  };
+  $("pageTitle").textContent = titles[name] || "JARVIS";
+}
+
+document.querySelectorAll(".nav").forEach(button => {
+  button.addEventListener("click", () => setView(button.dataset.view));
+});
+document.querySelectorAll("[data-go]").forEach(button => {
+  button.addEventListener("click", () => setView(button.dataset.go));
+});
+
+function formatDue(value) {
+  if (!value) return "";
+  let date;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const parts = value.split("-").map(Number);
+    date = new Date(parts[0], parts[1] - 1, parts[2]);
+  } else {
+    date = new Date(value);
+  }
+  if (Number.isNaN(date.getTime())) return value;
+  const dateText = date.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  });
+  if (!value.includes("T")) return dateText;
+  return dateText + " · " + date.toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function renderMemory() {
+  const list = $("memoryList");
+  list.replaceChildren();
+  const notes = read(KEYS.notes);
+  $("memoryCount").textContent = notes.length;
+
+  if (!notes.length) {
+    list.append(safeText("p", "Todavía no hay notas guardadas.", "empty"));
+    return;
+  }
+
+  notes.forEach((item, index) => {
+    const row = safeText("div", "", "data-item");
+    row.append(safeText("span", item.text, "item-text"));
+    row.append(safeText("small", new Date(item.created).toLocaleDateString("es-ES")));
+    const remove = safeText("button", "Borrar", "delete-btn");
+    remove.addEventListener("click", () => {
+      const current = read(KEYS.notes);
+      current.splice(index, 1);
+      write(KEYS.notes, current);
+      renderMemory();
+    });
+    row.append(remove);
+    list.append(row);
+  });
+}
+
+function renderTasks() {
+  const list = $("taskList");
+  const tasks = read(KEYS.tasks);
+  list.replaceChildren();
+
+  const pending = tasks.filter(task => !task.done);
+  $("taskCount").textContent = pending.length;
+  $("taskSummary").textContent = pending.length + " pendientes";
+  $("homeTasks").replaceChildren();
+
+  if (!tasks.length) {
+    list.append(safeText("p", "Todavía no tienes tareas.", "empty"));
+  }
+
+  tasks.forEach((task, index) => {
+    const row = safeText("div", "", "data-item" + (task.done ? " done" : ""));
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.checked = !!task.done;
+    check.setAttribute("aria-label", "Marcar tarea como completada");
+    check.addEventListener("change", () => {
+      const current = read(KEYS.tasks);
+      current[index].done = check.checked;
+      write(KEYS.tasks, current);
+      renderTasks();
+    });
+    row.append(check);
+
+    const label = safeText("span", task.text, "item-text");
+    const details = "Prioridad: " + (task.priority || "Normal") +
+      (task.due ? " · Fecha: " + formatDue(task.due) : "");
+    label.append(safeText("small", details));
+    row.append(label);
+
+    const remove = safeText("button", "Borrar", "delete-btn");
+    remove.addEventListener("click", () => {
+      const current = read(KEYS.tasks);
+      current.splice(index, 1);
+      write(KEYS.tasks, current);
+      renderTasks();
+    });
+    row.append(remove);
+    list.append(row);
+  });
+
+  pending.slice(0, 4).forEach(task => {
+    const label = task.text + (task.due ? " · " + formatDue(task.due) : "");
+    $("homeTasks").append(safeText("div", label, "compact-item"));
+  });
+  if (!pending.length) {
+    $("homeTasks").append(safeText("p", "No tienes tareas pendientes.", "empty"));
+  }
+}
+
+function renderAll() {
+  renderTasks();
+  renderMemory();
+}
+
+function addTask(text, priority = "Normal", due = "") {
+  const tasks = read(KEYS.tasks);
+  tasks.push({
+    text,
+    priority,
+    done: false,
+    due,
+    notified: false,
+    created: new Date().toISOString()
+  });
+  write(KEYS.tasks, tasks);
+  renderTasks();
+  checkReminders();
+}
+
+function addNote(text) {
+  const notes = read(KEYS.notes);
+  notes.unshift({ text, created: new Date().toISOString() });
+  write(KEYS.notes, notes);
+  renderMemory();
+}
+
+function ymd(date) {
+  return date.getFullYear() + "-" +
+    String(date.getMonth() + 1).padStart(2, "0") + "-" +
+    String(date.getDate()).padStart(2, "0");
+}
+
+/* Interpreta expresiones sencillas: hoy, mañana, pasado mañana y a las 18:30. */
+function extractSchedule(source, defaultReminder = false) {
+  let cleaned = String(source || "").trim();
+  const now = new Date();
+  let date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  let hasDate = false;
+  let hasTime = false;
+  let hour = 9;
+  let minute = 0;
+
+  const relative = cleaned.match(/\b(pasado mañana|mañana|hoy)\b/i);
+  if (relative) {
+    hasDate = true;
+    const term = relative[1].toLocaleLowerCase("es");
+    if (term === "mañana") date.setDate(date.getDate() + 1);
+    if (term === "pasado mañana") date.setDate(date.getDate() + 2);
+    cleaned = cleaned.replace(relative[0], " ");
+  } else {
+    const explicit = cleaned.match(/\b(?:el\s+)?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?\b/);
+    if (explicit) {
+      let year = explicit[3] ? Number(explicit[3]) : now.getFullYear();
+      if (year < 100) year += 2000;
+      date = new Date(year, Number(explicit[2]) - 1, Number(explicit[1]));
+      if (!explicit[3] && date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+        date.setFullYear(date.getFullYear() + 1);
+      }
+      hasDate = !Number.isNaN(date.getTime());
+      cleaned = cleaned.replace(explicit[0], " ");
+    }
+  }
+
+  const time = cleaned.match(/\ba\s+las\s+(\d{1,2})(?::(\d{2}))?\s*(?:h|horas)?\b/i);
+  if (time) {
+    hour = Number(time[1]);
+    minute = Number(time[2] || 0);
+    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+      hasTime = true;
+      cleaned = cleaned.replace(time[0], " ");
+    }
+  }
+
+  if (hasTime && !hasDate) {
+    const candidate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), hour, minute);
+    if (candidate.getTime() <= now.getTime()) date.setDate(date.getDate() + 1);
+  }
+
+  if (defaultReminder && hasDate && !hasTime) {
+    hasTime = true;
+    hour = 9;
+    minute = 0;
+  }
+
+  cleaned = cleaned
+    .replace(/\b(?:para|el día)\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .replace(/^[\s,.-]+|[\s,.-]+$/g, "")
+    .trim();
+
+  let due = "";
+  if (hasDate && hasTime) {
+    due = ymd(date) + "T" + String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0");
+  } else if (hasDate) {
+    due = ymd(date);
+  }
+  return { text: cleaned, due, hasDate, hasTime };
+}
+
+function dueDescription(value) {
+  return formatDue(value).replace(" · ", " a las ");
+}
+
+const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
+
+async function askJarvis(text) {
+  const history = read(KEYS.chat).slice(-14).map(message => ({
+    role: message.who === "assistant" ? "model" : "user",
+    text: String(message.text || "").slice(0, 1600)
+  }));
+
+  if (
+    !history.length ||
+    history[history.length - 1].role !== "user" ||
+    history[history.length - 1].text !== text
+  ) {
+    history.push({ role: "user", text });
+  }
+
+  const memory = settings.shareMemoryWithAI
+    ? read(KEYS.notes).slice(0, 12).map(note => String(note.text || "").slice(0, 250))
+    : [];
+
+  try {
+    const response = await fetch(AI_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: history, memory })
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "No se pudo obtener respuesta.");
+    if (typeof data.reply !== "string" || !data.reply.trim()) {
+      throw new Error("La IA no ha devuelto una respuesta.");
+    }
+    return data.reply.trim();
+  } catch (error) {
+    return error.message ||
+      "No he podido conectar con mi inteligencia artificial. Comprueba la conexión e inténtalo de nuevo.";
+  }
+}
+
+function describePendingTasks() {
+  const pending = read(KEYS.tasks).filter(task => !task.done);
+  if (!pending.length) return "No tienes tareas pendientes.";
+  return "Tienes " + pending.length + " tareas pendientes: " +
+    pending.map(task => task.text + (task.due ? " (" + dueDescription(task.due) + ")" : "")).join("; ");
+}
+
+function describeMemory() {
+  const notes = read(KEYS.notes);
+  if (!notes.length) return "Todavía no tienes notas guardadas.";
+  return "Tienes " + notes.length + " notas guardadas. " +
+    notes.slice(0, 5).map((note, index) => (index + 1) + ". " + note.text).join(" ");
+}
+
+async function processCommand(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return;
+  say(text, "user");
+
+  const low = text.toLocaleLowerCase("es");
+  let reply = "";
+  let useAI = false;
+  let match;
+
+  match = text.match(/^(?:recuérdame|recuerdame|avísame|avisame)\s+(.+)/i);
+  if (match) {
+    const schedule = extractSchedule(match[1], true);
+    const taskText = schedule.text || "Recordatorio";
+    if (!schedule.due) {
+      addTask(taskText);
+      reply = "He guardado «" + taskText + "» como tarea. Para programar el aviso, dime el día y la hora, por ejemplo: «recuérdame estudiar mañana a las 18:00».";
+    } else {
+      addTask(taskText, "Normal", schedule.due);
+      reply = "He programado el recordatorio de «" + taskText + "» para " +
+        dueDescription(schedule.due) + ". Para recibir el aviso, activa las notificaciones y mantén JARVIS abierto.";
+    }
+  } else if ((match = text.match(/^(?:añade|agrega|crea|apunta)\s+(?:una\s+)?tarea\s+(?:de\s+)?(.+)/i))) {
+    const schedule = extractSchedule(match[1], false);
+    const taskText = schedule.text || "Nueva tarea";
+    addTask(taskText, "Normal", schedule.due);
+    reply = "He añadido la tarea: " + taskText +
+      (schedule.due ? " · Fecha: " + dueDescription(schedule.due) : "") + ".";
+  } else if ((match = text.match(/^(?:guarda|anota|recuerda)\s+(?:que\s+)?(.+)/i))) {
+    addNote(match[1]);
+    reply = "He guardado en memoria: " + match[1] + ".";
+  } else if (/^(?:busca|investiga|buscar)\s+(.+)/i.test(text)) {
+    const query = text.replace(/^(?:busca|investiga|buscar)\s+/i, "");
+    window.open("https://www.google.com/search?q=" + encodeURIComponent(query), "_blank", "noopener,noreferrer");
+    reply = "He abierto una búsqueda sobre: " + query + ".";
+  } else if (/^(?:abre|inicia)\s+(calendar|calendario|drive|gmail|correo)/i.test(text)) {
+    const app = text.match(/(calendar|calendario|drive|gmail|correo)/i)[0].toLowerCase();
+    const urls = {
+      calendar: "https://calendar.google.com/",
+      calendario: "https://calendar.google.com/",
+      drive: "https://drive.google.com/",
+      gmail: "https://mail.google.com/",
+      correo: "https://mail.google.com/"
+    };
+    window.open(urls[app], "_blank", "noopener,noreferrer");
+    reply = "Abriendo " + app + ".";
+  } else if (/qué tareas|mis tareas|pendientes/.test(low)) {
+    reply = describePendingTasks();
+  } else if (/qué recuerdas|mis notas|qué sabes de mí|memoria/.test(low)) {
+    reply = describeMemory();
+  } else if (/qué hora|dime la hora/.test(low)) {
+    reply = "Son las " + new Date().toLocaleTimeString("es-ES", {
+      hour: "2-digit",
+      minute: "2-digit"
+    }) + ".";
+  } else if (/qué fecha|qué día es|fecha de hoy/.test(low)) {
+    reply = "Hoy es " + new Date().toLocaleDateString("es-ES", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    }) + ".";
+  } else if (/ayuda|qué puedes hacer|comandos/.test(low)) {
+    reply = "Puedo conversar contigo, guardar notas («recuerda que...»), consultar tu memoria, añadir tareas («añade tarea estudiar inglés»), programar avisos («recuérdame estudiar mañana a las 18:00»), consultar pendientes, decirte la hora y fecha y abrir Google Calendar, Drive o Gmail. También puedo responder por voz si está activado.";
+  } else {
+    useAI = true;
+  }
+
+  if (useAI) reply = await askJarvis(text);
+  say(reply);
+  speak(reply);
+}
+
+$("memoryForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const text = $("memoryInput").value.trim();
+  if (!text) return;
+  addNote(text);
+  $("memoryInput").value = "";
+  say("He guardado esa nota en la memoria de este dispositivo.");
+});
+
+$("taskForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const text = $("taskInput").value.trim();
+  if (!text) return;
+  addTask(text, $("taskPriority").value, $("taskDate").value || "");
+  $("taskInput").value = "";
+  $("taskDate").value = "";
+  say("Tarea añadida. " + (Notification.permission === "granted"
+    ? "Comprobaré el recordatorio mientras JARVIS esté abierto."
+    : "Activa las notificaciones en Herramientas para recibir avisos."));
+});
+
+function download(name, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$("exportMemory").addEventListener("click", () => {
+  download("jarvis-memoria.json", read(KEYS.notes));
+});
+$("exportAll").addEventListener("click", () => {
+  download("jarvis-copia-seguridad.json", {
+    version: 4,
+    notes: read(KEYS.notes),
+    tasks: read(KEYS.tasks),
+    chat: read(KEYS.chat),
+    exportedAt: new Date().toISOString()
+  });
+});
+
+$("importFile").addEventListener("change", async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data || !Array.isArray(data.notes) || !Array.isArray(data.tasks)) {
+      throw new Error("Formato no válido");
+    }
+    if (!confirm("La importación sustituirá las notas y tareas actuales de este navegador. ¿Continuar?")) return;
+    write(KEYS.notes, data.notes);
+    write(KEYS.tasks, data.tasks);
+    if (Array.isArray(data.chat)) write(KEYS.chat, data.chat);
+    $("chatLog").replaceChildren();
+    restoreChat();
+    renderAll();
+    say("Copia de seguridad importada correctamente.");
+  } catch {
+    alert("No se pudo importar el archivo. Comprueba que sea una copia de JARVIS válida.");
+  } finally {
+    event.target.value = "";
+  }
+});
+
+$("searchForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const query = $("searchInput").value.trim();
+  if (query) {
+    window.open("https://www.google.com/search?q=" + encodeURIComponent(query), "_blank", "noopener,noreferrer");
+  }
+});
+
+async function showReminder(task) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const title = "JARVIS · Recordatorio";
+  const options = { body: task.text, tag: "jarvis-task-" + task.created };
+  try {
+    if ("serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, options);
+    } else {
+      new Notification(title, options);
+    }
+  } catch {
+    try {
+      new Notification(title, options);
+    } catch {}
+  }
+}
+
+function checkReminders() {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const tasks = read(KEYS.tasks);
+  let changed = false;
+  const dueTasks = [];
+  const now = Date.now();
+
+  tasks.forEach(task => {
+    if (task.done || task.notified || !task.due || !task.due.includes("T")) return;
+    const timestamp = new Date(task.due).getTime();
+    if (!Number.isNaN(timestamp) && timestamp <= now) {
+      task.notified = true;
+      changed = true;
+      dueTasks.push(task);
+    }
+  });
+
+  if (changed) write(KEYS.tasks, tasks);
+  dueTasks.forEach(task => showReminder(task));
+}
+
+$("searchInput").setAttribute("aria-label", "Buscar en internet");
+$("chatForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const value = $("chatInput").value;
+  $("chatInput").value = "";
+  processCommand(value);
+});
+$("focusInputBtn").addEventListener("click", () => $("chatInput").focus());
+
+$("voiceBtn").addEventListener("click", () => {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
+    say("El reconocimiento de voz no está disponible en este navegador. Puedes escribir en el chat.");
+    return;
+  }
+
+  const recognition = new Recognition();
+  recognition.lang = "es-ES";
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onstart = () => {
+    $("systemState").textContent = "ESCUCHANDO";
+    $("voiceBtn").textContent = "🎙 Escuchando…";
+  };
+  recognition.onresult = event => processCommand(event.results[0][0].transcript);
+  recognition.onerror = () => say("No he podido reconocer la voz. Comprueba los permisos del micrófono.");
+  recognition.onend = () => {
+    $("systemState").textContent = "ASISTENTE CONECTADO";
+    $("voiceBtn").textContent = "🎙 Hablar con JARVIS";
+  };
+  try {
+    recognition.start();
+  } catch {
+    say("El micrófono ya está activo o el navegador no permite iniciar el reconocimiento.");
+  }
+});
+
+$("voiceReplies").checked = settings.voiceReplies;
+$("saveChat").checked = settings.saveChat;
+$("shareMemoryWithAI").checked = settings.shareMemoryWithAI;
+
+$("voiceReplies").addEventListener("change", event => {
+  settings.voiceReplies = event.target.checked;
+  saveSettings();
+  if (!settings.voiceReplies && "speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+});
+$("saveChat").addEventListener("change", event => {
+  settings.saveChat = event.target.checked;
+  if (!settings.saveChat) {
+    localStorage.removeItem(KEYS.chat);
+    $("chatLog").replaceChildren();
+    say("La conversación ya no se guardará en este dispositivo.", "assistant", false);
+  }
+  saveSettings();
+});
+$("shareMemoryWithAI").addEventListener("change", event => {
+  settings.shareMemoryWithAI = event.target.checked;
+  saveSettings();
+  say(settings.shareMemoryWithAI
+    ? "De acuerdo. Enviaré tus notas guardadas a la IA como contexto para ayudarte a recordar. No incluyas contraseñas ni datos sensibles."
+    : "He desactivado el uso de tus notas como contexto de la IA. Seguirán guardadas en este dispositivo.");
+});
+
+$("clearChat").addEventListener("click", () => {
+  if (!confirm("¿Borrar el historial de conversación de este dispositivo?")) return;
+  localStorage.removeItem(KEYS.chat);
+  $("chatLog").replaceChildren();
+  say("Conversación borrada.", "assistant", false);
+});
+
+$("enableNotifications").addEventListener("click", async () => {
+  if (!("Notification" in window)) {
+    say("Este navegador no admite notificaciones.");
+    return;
+  }
+  const permission = await Notification.requestPermission();
+  if (permission === "granted") {
+    say("Notificaciones activadas. Los avisos de tareas se mostrarán mientras JARVIS esté abierto.");
+    checkReminders();
+  } else {
+    say("No se han concedido permisos de notificación.");
+  }
+});
+
+function updateClock() {
+  $("clock").textContent = new Date().toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+updateClock();
+setInterval(updateClock, 30000);
+
+restoreChat();
+renderAll();
+$("systemState").textContent = "ASISTENTE CONECTADO";
+
+let installPrompt = null;
+window.addEventListener("beforeinstallprompt", event => {
+  event.preventDefault();
+  installPrompt = event;
+  $("installBtn").hidden = false;
+});
+$("installBtn").addEventListener("click", async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  $("installBtn").hidden = true;
+});
+
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+  });
+}
+
+checkReminders();
+setInterval(checkReminders, 15000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) checkReminders();
+});
+window.addEventListener("focus", checkReminders);
