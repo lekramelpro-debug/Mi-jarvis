@@ -26,7 +26,7 @@ $("importFile").addEventListener("change",async e=>{const file=e.target.files?.[
 $("searchForm").addEventListener("submit",e=>{e.preventDefault();const q=$("searchInput").value.trim();if(q)window.open("https://www.google.com/search?q="+encodeURIComponent(q),"_blank","noopener,noreferrer")});
 function addTask(text,priority="Normal",due=""){const tasks=read(KEYS.tasks);tasks.push({text,priority,done:false,due,created:new Date().toISOString()});write(KEYS.tasks,tasks);renderTasks()}
 function addNote(text){const notes=read(KEYS.notes);notes.unshift({text,created:new Date().toISOString()});write(KEYS.notes,notes);renderMemory()}
-const AI_ENDPOINT = ""; // Se rellenará con la URL pública del Worker después de desplegarlo.
+const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
 async function askJarvis(text){
   if(!AI_ENDPOINT)return "La conexión inteligente ya está preparada en el código, pero falta publicar el servidor seguro de Cloudflare y conectarlo. Tus tareas y notas siguen funcionando.";
   const history=read(KEYS.chat).slice(-14).map(m=>({role:m.who==="assistant"?"model":"user",text:String(m.text||"").slice(0,1600)}));
