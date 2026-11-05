@@ -176,13 +176,14 @@ function renderMemory() {
     row.append(safeText("small", new Date(item.created).toLocaleDateString("es-ES")));
     const remove = safeText("button", "Borrar", "delete-btn");
     remove.addEventListener("click", () => {
-      const current = read(KEYS.notes).filter(item => !item.deletedAt);
-      const target = current[index];
+      const all = read(KEYS.notes);
+      const visible = all.filter(item => !item.deletedAt);
+      const target = visible[index];
       if (target) {
         target.deletedAt = new Date().toISOString();
         target.updatedAt = target.deletedAt;
       }
-      write(KEYS.notes, current.length ? read(KEYS.notes).map(item => item.id === target?.id ? target : item) : read(KEYS.notes).map(item => item.id === target?.id ? target : item));
+      write(KEYS.notes, all);
       renderMemory();
       syncNow(true);
     });
@@ -212,10 +213,11 @@ function renderTasks() {
     check.checked = !!task.done;
     check.setAttribute("aria-label", "Marcar tarea como completada");
     check.addEventListener("change", () => {
-      const current = read(KEYS.tasks).filter(item => !item.deletedAt);
-      current[index].done = check.checked;
-      current[index].updatedAt = new Date().toISOString();
-      write(KEYS.tasks, current);
+      const all = read(KEYS.tasks);
+      const visible = all.filter(item => !item.deletedAt);
+      visible[index].done = check.checked;
+      visible[index].updatedAt = new Date().toISOString();
+      write(KEYS.tasks, all);
       renderTasks();
       syncNow(true);
     });
@@ -229,13 +231,14 @@ function renderTasks() {
 
     const remove = safeText("button", "Borrar", "delete-btn");
     remove.addEventListener("click", () => {
-      const current = read(KEYS.tasks).filter(item => !item.deletedAt);
-      const target = current[index];
+      const all = read(KEYS.tasks);
+      const visible = all.filter(item => !item.deletedAt);
+      const target = visible[index];
       if (target) {
         target.deletedAt = new Date().toISOString();
         target.updatedAt = target.deletedAt;
       }
-      write(KEYS.tasks, read(KEYS.tasks).map(item => item.id === target?.id ? target : item));
+      write(KEYS.tasks, all);
       renderTasks();
       syncNow(true);
     });
