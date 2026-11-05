@@ -37,7 +37,7 @@ const safeText = (tag, text, className) => {
 };
 
 const settings = Object.assign(
-  { voiceReplies: true, saveChat: true, shareMemoryWithAI: false },
+  { voiceReplies: true, saveChat: true, shareMemoryWithAI: false, syncToken: "", voiceName: "", voiceLang: "" },
   safeRead(KEYS.settings, {})
 );
 
@@ -45,12 +45,53 @@ function saveSettings() {
   write(KEYS.settings, settings);
 }
 
-function speak(text) {
-  if (!settings.voiceReplies || !("speechSynthesis" in window)) return;
+function getSelectedVoice() {
+  if (!("speechSynthesis" in window)) return null;
+  const voices = window.speechSynthesis.getVoices();
+  return voices.find(voice => voice.name === settings.voiceName && voice.lang === settings.voiceLang) ||
+    voices.find(voice => /^es(?:-|$)/i.test(voice.lang)) || null;
+}
+
+function speak(text, force = false) {
+  if ((!settings.voiceReplies && !force) || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = "es-ES";
+  const voice = getSelectedVoice();
+  if (voice) {
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+  }
   window.speechSynthesis.speak(utterance);
+}
+
+function refreshVoiceList() {
+  if (!("speechSynthesis" in window)) return;
+  const select = $("voiceSelect");
+  if (!select) return;
+  const allVoices = window.speechSynthesis.getVoices();
+  const spanish = allVoices.filter(voice => /^es(?:-|$)/i.test(voice.lang));
+  const voices = spanish.length ? spanish : allVoices;
+  const previous = settings.voiceName + "|" + settings.voiceLang;
+  select.replaceChildren();
+
+  const automatic = document.createElement("option");
+  automatic.value = "";
+  automatic.textContent = "Automática (predeterminada)";
+  select.append(automatic);
+
+  voices.forEach(voice => {
+    const option = document.createElement("option");
+    option.value = voice.name + "|" + voice.lang;
+    option.textContent = voice.name + " (" + voice.lang + ")" + (voice.default ? " · predeterminada" : "");
+    select.append(option);
+  });
+
+  select.value = previous;
+  if (select.value !== previous) select.value = "";
+  $("voiceSupport").textContent = voices.length
+    ? (spanish.length ? voices.length + " voces disponibles en español en este dispositivo." : "No hay voces españolas detectadas; se muestran las voces instaladas.")
+    : "El navegador todavía no ha cargado voces. Vuelve a abrir esta lista en unos segundos.";
 }
 
 function say(text, who = "assistant", persist = true) {
@@ -121,7 +162,7 @@ function formatDue(value) {
 function renderMemory() {
   const list = $("memoryList");
   list.replaceChildren();
-  const notes = read(KEYS.notes);
+  const notes = read(KEYS.notes).filter(item => !item.deletedAt);
   $("memoryCount").textContent = notes.length;
 
   if (!notes.length) {
@@ -135,10 +176,15 @@ function renderMemory() {
     row.append(safeText("small", new Date(item.created).toLocaleDateString("es-ES")));
     const remove = safeText("button", "Borrar", "delete-btn");
     remove.addEventListener("click", () => {
-      const current = read(KEYS.notes);
-      current.splice(index, 1);
-      write(KEYS.notes, current);
+      const current = read(KEYS.notes).filter(item => !item.deletedAt);
+      const target = current[index];
+      if (target) {
+        target.deletedAt = new Date().toISOString();
+        target.updatedAt = target.deletedAt;
+      }
+      write(KEYS.notes, current.length ? read(KEYS.notes).map(item => item.id === target?.id ? target : item) : read(KEYS.notes).map(item => item.id === target?.id ? target : item));
       renderMemory();
+      syncNow(true);
     });
     row.append(remove);
     list.append(row);
@@ -147,7 +193,7 @@ function renderMemory() {
 
 function renderTasks() {
   const list = $("taskList");
-  const tasks = read(KEYS.tasks);
+  const tasks = read(KEYS.tasks).filter(task => !task.deletedAt);
   list.replaceChildren();
 
   const pending = tasks.filter(task => !task.done);
@@ -166,10 +212,12 @@ function renderTasks() {
     check.checked = !!task.done;
     check.setAttribute("aria-label", "Marcar tarea como completada");
     check.addEventListener("change", () => {
-      const current = read(KEYS.tasks);
+      const current = read(KEYS.tasks).filter(item => !item.deletedAt);
       current[index].done = check.checked;
+      current[index].updatedAt = new Date().toISOString();
       write(KEYS.tasks, current);
       renderTasks();
+      syncNow(true);
     });
     row.append(check);
 
@@ -181,10 +229,15 @@ function renderTasks() {
 
     const remove = safeText("button", "Borrar", "delete-btn");
     remove.addEventListener("click", () => {
-      const current = read(KEYS.tasks);
-      current.splice(index, 1);
-      write(KEYS.tasks, current);
+      const current = read(KEYS.tasks).filter(item => !item.deletedAt);
+      const target = current[index];
+      if (target) {
+        target.deletedAt = new Date().toISOString();
+        target.updatedAt = target.deletedAt;
+      }
+      write(KEYS.tasks, read(KEYS.tasks).map(item => item.id === target?.id ? target : item));
       renderTasks();
+      syncNow(true);
     });
     row.append(remove);
     list.append(row);
@@ -204,26 +257,37 @@ function renderAll() {
   renderMemory();
 }
 
+function makeId() {
+  if (crypto && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return "jv-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2);
+}
+
 function addTask(text, priority = "Normal", due = "") {
   const tasks = read(KEYS.tasks);
+  const now = new Date().toISOString();
   tasks.push({
+    id: makeId(),
     text,
     priority,
     done: false,
     due,
     notified: false,
-    created: new Date().toISOString()
+    created: now,
+    updatedAt: now
   });
   write(KEYS.tasks, tasks);
   renderTasks();
   checkReminders();
+  syncNow(true);
 }
 
 function addNote(text) {
   const notes = read(KEYS.notes);
-  notes.unshift({ text, created: new Date().toISOString() });
+  const now = new Date().toISOString();
+  notes.unshift({ id: makeId(), text, created: now, updatedAt: now });
   write(KEYS.notes, notes);
   renderMemory();
+  syncNow(true);
 }
 
 function ymd(date) {
@@ -304,6 +368,85 @@ function dueDescription(value) {
 }
 
 const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
+
+function syncRecordKey(item, kind) {
+  if (item.id) return String(item.id);
+  const created = String(item.created || "legacy");
+  const content = String(item.text || "").slice(0, 120);
+  return kind + ":" + created + ":" + content;
+}
+
+function syncRecordTime(item) {
+  const value = item.updatedAt || item.deletedAt || item.created || "";
+  const time = Date.parse(value);
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function mergeSyncRecords(localItems, remoteItems, kind) {
+  const merged = new Map();
+  [...remoteItems, ...localItems].forEach(raw => {
+    if (!raw || typeof raw.text !== "string") return;
+    const item = Object.assign({}, raw, {
+      id: syncRecordKey(raw, kind),
+      updatedAt: raw.updatedAt || raw.deletedAt || raw.created || new Date(0).toISOString()
+    });
+    const previous = merged.get(item.id);
+    if (!previous || syncRecordTime(item) >= syncRecordTime(previous)) {
+      merged.set(item.id, item);
+    }
+  });
+  return Array.from(merged.values());
+}
+
+let syncInProgress = false;
+
+async function syncRequest(action, data) {
+  const response = await fetch(AI_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer " + settings.syncToken
+    },
+    body: JSON.stringify({ action, data })
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || "No se pudo sincronizar.");
+  return result;
+}
+
+async function syncNow(silent = false) {
+  if (!settings.syncToken || syncInProgress) return false;
+  syncInProgress = true;
+  const button = $("syncNow");
+  const status = $("syncStatus");
+  if (button) button.disabled = true;
+  if (status) status.textContent = "Sincronizando memoria…";
+
+  try {
+    const remote = await syncRequest("sync_pull");
+    const remoteNotes = Array.isArray(remote.data?.notes) ? remote.data.notes : [];
+    const remoteTasks = Array.isArray(remote.data?.tasks) ? remote.data.tasks : [];
+    const notes = mergeSyncRecords(read(KEYS.notes), remoteNotes, "note");
+    const tasks = mergeSyncRecords(read(KEYS.tasks), remoteTasks, "task");
+
+    write(KEYS.notes, notes);
+    write(KEYS.tasks, tasks);
+    renderAll();
+
+    await syncRequest("sync_push", { notes, tasks });
+    if (status) status.textContent = "Sincronizado · " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+    if (!silent) say("Memoria y tareas sincronizadas con tus otros dispositivos.");
+    return true;
+  } catch (error) {
+    if (status) status.textContent = "No se ha podido sincronizar: " + error.message;
+    if (!silent) say("Error de sincronización: " + error.message);
+    return false;
+  } finally {
+    syncInProgress = false;
+    if (button) button.disabled = false;
+  }
+}
+
 
 async function askJarvis(text) {
   const history = read(KEYS.chat).slice(-14).map(message => ({
@@ -583,6 +726,41 @@ $("voiceBtn").addEventListener("click", () => {
 $("voiceReplies").checked = settings.voiceReplies;
 $("saveChat").checked = settings.saveChat;
 $("shareMemoryWithAI").checked = settings.shareMemoryWithAI;
+$("syncTokenInput").value = settings.syncToken || "";
+refreshVoiceList();
+if ("speechSynthesis" in window) {
+  window.speechSynthesis.addEventListener("voiceschanged", refreshVoiceList);
+}
+$("voiceSelect").addEventListener("change", event => {
+  const value = event.target.value;
+  if (!value) {
+    settings.voiceName = "";
+    settings.voiceLang = "";
+  } else {
+    const parts = value.split("|");
+    settings.voiceName = parts[0] || "";
+    settings.voiceLang = parts[1] || "";
+  }
+  saveSettings();
+});
+$("testVoice").addEventListener("click", () => {
+  if (!("speechSynthesis" in window)) {
+    say("Este navegador no permite cambiar la voz.");
+    return;
+  }
+  speak("Hola. Soy JARVIS. Esta es una prueba de la voz que has seleccionado.", true);
+});
+$("saveSyncToken").addEventListener("click", async () => {
+  const token = $("syncTokenInput").value.trim();
+  if (token.length < 32) {
+    say("La clave de sincronización debe tener al menos 32 caracteres. Utiliza una clave aleatoria y no la compartas en el chat.");
+    return;
+  }
+  settings.syncToken = token;
+  saveSettings();
+  await syncNow(false);
+});
+$("syncNow").addEventListener("click", () => syncNow(false));
 
 $("voiceReplies").addEventListener("change", event => {
   settings.voiceReplies = event.target.checked;
@@ -668,3 +846,6 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden) checkReminders();
 });
 window.addEventListener("focus", checkReminders);
+if (settings.syncToken) {
+  window.setTimeout(() => syncNow(true), 1200);
+}
