@@ -8,3 +8,9 @@ enabled = true
 
 [ai]
 binding = "AI"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "jarvis-memory"
+database_id = "d808c2e4-aa71-45a6-82e1-8b1f89ba7865"
+
