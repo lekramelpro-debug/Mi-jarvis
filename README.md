@@ -33,7 +33,7 @@ La tabla `jarvis_vault` se crea automáticamente la primera vez que se usa la si
 
 ### Proteger y activar la sincronización
 
-1. En **mi-jarvis → Settings → Variables and Secrets**, crea un secreto llamado exactamente `JARVIS_SYNC_TOKEN`.
+1. Abre JARVIS → **Herramientas** y pulsa **Generar clave segura**. Copia la clave.\n2. En **mi-jarvis → Settings → Variables and Secrets**, crea un secreto llamado exactamente `JARVIS_SYNC_TOKEN`.
 2. Como valor, utiliza una clave aleatoria y única de al menos 32 caracteres. No reutilices la contraseña de tu correo, GitHub o Cloudflare.
 3. Guarda y despliega el Worker.
 4. Abre JARVIS → **Herramientas**.
