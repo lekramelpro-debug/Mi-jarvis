@@ -51,7 +51,11 @@
 <p class="muted">Conecta una base de datos D1 para compartir notas y tareas entre el ordenador y el móvil. La clave se guarda en este navegador y se utiliza únicamente para la sincronización.</p>
 <div class="sync-settings">
   <label for="syncTokenInput">Clave de sincronización</label>
-  <input id="syncTokenInput" type="password" maxlength="200" minlength="32" autocomplete="off" placeholder="Pega aquí la misma clave en tus dispositivos">
+  <input id="syncTokenInput" type="password" maxlength="200" minlength="32" autocomplete="off" placeholder="Genera o pega aquí tu clave privada">
+  <div class="hero-actions">
+    <button class="btn secondary small" id="generateSyncToken" type="button">Generar clave segura</button>
+    <button class="btn secondary small" id="copySyncToken" type="button">Copiar clave</button>
+  </div>
   <div class="hero-actions">
     <button class="btn primary" id="saveSyncToken" type="button">Guardar clave y sincronizar</button>
     <button class="btn secondary" id="syncNow" type="button">Sincronizar ahora</button>
@@ -71,5 +75,5 @@
 <footer>J.A.R.V.I.S. · VERSIÓN 0.6 · Memoria sincronizada opcionalmente entre dispositivos.</footer>
 </main>
 </div>
-<script src="./app.js?v=jarvis-06" defer></script>
+<script src="./app.js?v=jarvis-07" defer></script>
 </body></html>
