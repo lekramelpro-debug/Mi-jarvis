@@ -308,6 +308,7 @@ function extractSchedule(source, defaultReminder = false) {
   let date = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   let hasDate = false;
   let hasTime = false;
+  let timeAmbiguous = false;
   let hour = 9;
   let minute = 0;
 
@@ -332,10 +333,17 @@ function extractSchedule(source, defaultReminder = false) {
     }
   }
 
-  const time = cleaned.match(/\ba\s+las\s+(\d{1,2})(?::(\d{2}))?\s*(?:h|horas)?\b/i);
+  const wordHours = { una: 1, una: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, once: 11, doce: 12 };
+  const time = cleaned.match(/\ba\s+las\s+(\d{1,2}|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)(?::(\d{2}))?\s*(?:h|horas)?(?:\s+de\s+la\s+(mañana|tarde|noche))?\b/i);
   if (time) {
-    hour = Number(time[1]);
+    const rawHour = time[1].toLocaleLowerCase("es");
+    hour = wordHours[rawHour] || Number(rawHour);
     minute = Number(time[2] || 0);
+    const daypart = (time[3] || "").toLocaleLowerCase("es");
+    if (daypart === "tarde" && hour < 12) hour += 12;
+    if (daypart === "noche" && hour < 12) hour += 12;
+    if (daypart === "mañana" && hour === 12) hour = 0;
+    timeAmbiguous = !daypart && hour >= 1 && hour <= 12;
     if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
       hasTime = true;
       cleaned = cleaned.replace(time[0], " ");
@@ -365,7 +373,7 @@ function extractSchedule(source, defaultReminder = false) {
   } else if (hasDate) {
     due = ymd(date);
   }
-  return { text: cleaned, due, hasDate, hasTime };
+  return { text: cleaned, due, hasDate, hasTime, timeAmbiguous };
 }
 
 function dueDescription(value) {
@@ -561,8 +569,8 @@ async function processCommand(raw) {
   if (match) {
     const schedule = extractSchedule(match[1], false);
     const hasClearTime = schedule.hasTime;
-    if (!schedule.hasDate || !hasClearTime) {
-      reply = "Puedo preparar el evento en el calendario de tu Samsung. Dime el día y la hora exactos, por ejemplo: «agenda una cita mañana a las 18:00».";
+    if (!schedule.hasDate || !hasClearTime || schedule.timeAmbiguous) {
+      reply = "Puedo preparar el evento en el calendario de tu Samsung. Dime el día y la hora exactos. Si dices «a las seis», aclara si es de la mañana o de la tarde; por ejemplo: «agenda una cita mañana a las seis de la tarde».";
     } else {
       const title = (schedule.text || "Cita").replace(/^(?:una\s+)?(?:cita|reunión|reunion|evento)\s*/i, "").trim() || "Cita";
       if (buildCalendarIntent(title, schedule.due)) {
