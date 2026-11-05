@@ -23,3 +23,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .voice-settings .hint,.sync-settings .hint{display:block;line-height:1.5}
 .sync-settings .hero-actions{margin-top:3px}
 @media(max-width:600px){.sync-settings .hero-actions{flex-direction:column}.sync-settings .btn{width:100%}}
+
+
+/* Ajustes de voz */
+.voice-tuning{display:grid;grid-template-columns:1fr;gap:7px;padding:12px;background:#071522;border:1px solid #173b53;border-radius:9px}
+.voice-tuning label{display:flex;justify-content:space-between;color:var(--muted);font-size:12px}
+.voice-tuning output{color:var(--cyan);font-variant-numeric:tabular-nums}
+.voice-tuning input[type="range"]{width:100%;accent-color:var(--cyan)}
