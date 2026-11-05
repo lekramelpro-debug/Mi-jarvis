@@ -444,7 +444,8 @@ $("taskForm").addEventListener("submit", event => {
   addTask(text, $("taskPriority").value, $("taskDate").value || "");
   $("taskInput").value = "";
   $("taskDate").value = "";
-  say("Tarea añadida. " + (Notification.permission === "granted"
+  const notificationsAvailable = "Notification" in window && Notification.permission === "granted";
+  say("Tarea añadida. " + (notificationsAvailable
     ? "Comprobaré el recordatorio mientras JARVIS esté abierto."
     : "Activa las notificaciones en Herramientas para recibir avisos."));
 });
@@ -534,7 +535,7 @@ function checkReminders() {
     if (!Number.isNaN(timestamp) && timestamp <= now) {
       task.notified = true;
       changed = true;
-      dueTasks.push(task);
+      if (timestamp >= now - 24 * 60 * 60 * 1000) dueTasks.push(task);
     }
   });
 
