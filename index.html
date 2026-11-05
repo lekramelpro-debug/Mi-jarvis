@@ -18,7 +18,7 @@
     <button class="nav" data-view="research">⌕ <span>Investigación</span></button>
     <button class="nav" data-view="tools">⌘ <span>Herramientas</span></button>
   </nav>
-  <div class="sidebar-foot"><span class="pulse"></span> VERSIÓN 0.7 <small>IA conectada · Modo personal</small></div>
+  <div class="sidebar-foot"><span class="pulse"></span> VERSIÓN 0.9 <small>IA conectada · Modo personal</small></div>
 </aside>
 <main class="main">
 <header class="topbar"><div><span class="eyebrow">ASISTENTE PERSONAL</span><h1 id="pageTitle">Centro de mando</h1></div><div class="top-actions"><span class="clock" id="clock">--:--</span><button class="icon-btn" id="installBtn" hidden>＋ Instalar</button></div></header>
@@ -29,7 +29,7 @@
     <div class="reactor" aria-label="Núcleo visual JARVIS"><div class="reactor-core">J</div></div>
   </div>
   <div class="grid two">
-    <section class="panel chat-panel"><div class="section-head"><div><span class="eyebrow">INTERFAZ CONVERSACIONAL</span><h3>JARVIS</h3></div><span class="tag">IA CONECTADA</span></div><div id="chatLog" class="chat-log" aria-live="polite"><div class="message assistant"><b>JARVIS</b><p>Sistemas inicializados. Estoy conectado y preparado para ayudarte con ideas, memoria y tareas.</p></div></div><form id="chatForm" class="chat-form"><input id="chatInput" maxlength="500" placeholder="Escribe una instrucción..." autocomplete="off"><button class="btn primary" aria-label="Enviar">➤</button></form><div class="hint">Prueba: «recuérdame estudiar mañana a las 18:00», «recuerda que…» o «¿qué tareas tengo?».</div></section>
+    <section class="panel chat-panel"><div class="section-head"><div><span class="eyebrow">INTERFAZ CONVERSACIONAL</span><h3>JARVIS</h3></div><span class="tag">IA CONECTADA</span></div><div id="chatLog" class="chat-log" aria-live="polite"><div class="message assistant"><b>JARVIS</b><p>Sistemas inicializados. Estoy conectado y preparado para ayudarte con ideas, memoria y tareas.</p></div></div><form id="chatForm" class="chat-form"><textarea id="chatInput" maxlength="20000" rows="2" placeholder="Escribe un mensaje largo o una instrucción..." autocomplete="off"><button class="btn primary" aria-label="Enviar">➤</button></form><div class="hint">Prueba: «recuérdame estudiar mañana a las 18:00», «recuerda que…» o «¿qué tareas tengo?».</div></section>
     <section class="panel"><div class="section-head"><div><span class="eyebrow">RESUMEN PERSONAL</span><h3>Tu panel</h3></div></div><div class="stats"><div class="stat"><strong id="taskCount">0</strong><span>Tareas pendientes</span></div><div class="stat"><strong id="memoryCount">0</strong><span>Notas guardadas</span></div></div><div class="divider"></div><h4>Próximas tareas</h4><div id="homeTasks" class="compact-list"><p class="muted">Todavía no tienes tareas.</p></div></section>
   </div>
   <section class="panel"><div class="section-head"><div><span class="eyebrow">ACCESO RÁPIDO</span><h3>Herramientas</h3></div></div><div class="quick-grid"><button class="quick" data-go="tasks"><b>✓</b><span>Planificar mi día</span><small>Organiza prioridades</small></button><button class="quick" data-go="memory"><b>▤</b><span>Guardar una idea</span><small>Memoria de este dispositivo</small></button><button class="quick" data-go="research"><b>⌕</b><span>Investigar</span><small>Abrir búsqueda web</small></button><button class="quick" data-go="tools"><b>⌘</b><span>Mis herramientas</span><small>Accesos y ajustes</small></button></div></section>
@@ -78,8 +78,8 @@
   <button class="btn secondary small" id="enableNotifications">Activar notificaciones</button>
 </div>
 <p class="notice">Privacidad: las notas y tareas sincronizadas se guardan en tu base de datos D1. La clave de sincronización debe mantenerse privada y ser igual en tus dispositivos. Las notas solo se envían al modelo de IA si activas el permiso de memoria contextual. No guardes contraseñas ni datos sensibles. Los recordatorios locales necesitan que JARVIS esté abierto.</p><div class="divider"></div><h3>Exportar mis datos</h3><p class="muted">Descarga una copia de tus tareas, notas y conversación guardadas en este navegador.</p><div class="hero-actions"><button class="btn secondary" id="exportAll">Descargar copia de seguridad</button><label class="btn secondary file-label">Importar copia<input id="importFile" type="file" accept="application/json" hidden></label></div></section></section>
-<footer>J.A.R.V.I.S. · VERSIÓN 0.8 · Calendario Android y memoria sincronizada entre dispositivos.</footer>
+<footer>J.A.R.V.I.S. · VERSIÓN 0.9 · Mensajes largos y voz mejorada.</footer>
 </main>
 </div>
-<script src="./app.js?v=jarvis-10" defer></script>
+<script src="./app.js?v=jarvis-11" defer></script>
 </body></html>
