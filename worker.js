@@ -136,7 +136,7 @@ export default {
     }
 
     const length = Number(request.headers.get("Content-Length") || 0);
-    if (length > 120000) {
+    if (length > 250000) {
       return json({ error: "Solicitud demasiado larga." }, 413, origin);
     }
 
@@ -181,7 +181,7 @@ export default {
     const messages = [{ role: "system", content: system }];
     for (const item of body.messages) {
       if (!item || !["user", "model", "assistant"].includes(item.role) || typeof item.text !== "string") continue;
-      const text = item.text.trim().slice(0, 1600);
+      const text = item.text.trim().slice(0, 20000);
       if (!text) continue;
       messages.push({
         role: item.role === "user" ? "user" : "assistant",
