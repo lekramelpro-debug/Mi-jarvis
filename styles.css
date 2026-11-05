@@ -7,3 +7,10 @@
 .file-label{display:inline-flex;align-items:center;cursor:pointer}
 button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 @media(max-width:600px){.settings-row{align-items:flex-start;flex-direction:column}.file-label{width:fit-content}}
+
+
+/* Mejoras para el panel de tareas y controles */
+.task-form input[type="datetime-local"]{color-scheme:dark}
+.settings-row label{line-height:1.4}
+.notice{line-height:1.55}
+@media(max-width:600px){.task-form input[type="datetime-local"]{flex-basis:100%}}
