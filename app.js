@@ -557,22 +557,21 @@ async function processCommand(raw) {
   let useAI = false;
   let match;
 
-  match = text.match(/^(?:agéndame|agendame|agenda|programa|añade al calendario|anota en el calendario)\\s+(.+)/i);
+  match = text.match(/^(?:agéndame|agendame|agenda|programa|añade al calendario|anota en el calendario)\s+(.+)/i);
   if (match) {
     const schedule = extractSchedule(match[1], false);
     const hasClearTime = schedule.hasTime;
     if (!schedule.hasDate || !hasClearTime) {
       reply = "Puedo preparar el evento en el calendario de tu Samsung. Dime el día y la hora exactos, por ejemplo: «agenda una cita mañana a las 18:00».";
     } else {
-      const title = (schedule.text || "Cita").replace(/^(?:una\\s+)?(?:cita|reunión|reunion|evento)\\s*/i, "").trim() || "Cita";
+      const title = (schedule.text || "Cita").replace(/^(?:una\s+)?(?:cita|reunión|reunion|evento)\s*/i, "").trim() || "Cita";
       if (buildCalendarIntent(title, schedule.due)) {
         reply = "He preparado «" + title + "» para " + dueDescription(schedule.due) + ". Android abrirá la aplicación de calendario disponible. Revisa los datos y pulsa Guardar; el evento no se añade hasta que lo confirmes allí.";
       } else {
         reply = "No he podido preparar el evento. Comprueba la fecha y la hora.";
       }
     }
-  } else if ((match = text.match(/^(?:recuérdame|recuerdame|avísame|avisame)\\s+(.+)/i)))
-  if (match) {
+  } else if ((match = text.match(/^(?:recuérdame|recuerdame|avísame|avisame)\s+(.+)/i))) {
     const schedule = extractSchedule(match[1], true);
     const taskText = schedule.text || "Recordatorio";
     if (!schedule.due) {
