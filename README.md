@@ -5,11 +5,11 @@ Aplicación web personal en español para móvil y ordenador.
 ## Funciones
 
 - Chat con IA mediante Cloudflare Workers AI.
-- Reconocimiento de voz y respuestas habladas con selección de una voz instalada en cada dispositivo.
+- Reconocimiento de voz y respuestas habladas con selección de una voz instalada en cada dispositivo, más ajustes de velocidad y tono.
 - Memoria de notas y tareas guardada localmente.
-- Sincronización opcional de notas y tareas entre dispositivos mediante Cloudflare D1.
+- Sincronización automática opcional de notas y tareas entre dispositivos mediante Cloudflare D1, con actualización al volver a la web y comprobación periódica mientras permanece abierta.
 - Recordatorios del navegador mientras JARVIS permanece abierto.
-- Uso opcional de notas como contexto para la IA, desactivado por defecto.
+- Uso opcional de notas y tareas como contexto para la IA, desactivado por defecto.
 - Importación y exportación de copias de seguridad JSON.
 
 ## Configuración del Worker
@@ -42,7 +42,7 @@ La tabla `jarvis_vault` se crea automáticamente la primera vez que se usa la si
 
 La clave se guarda en el almacenamiento local del navegador y se envía al Worker únicamente en la petición de sincronización. No se añade al repositorio ni se envía al modelo de IA.
 
-Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz permanecen locales. La selección de voz debe hacerse por separado en cada dispositivo porque las voces disponibles dependen del sistema y del navegador.
+Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz permanecen locales. La selección de voz, velocidad y tono debe configurarse por separado en cada dispositivo porque las voces disponibles dependen del sistema y del navegador.
 
 ## Privacidad y límites
 
