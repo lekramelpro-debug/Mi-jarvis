@@ -37,7 +37,7 @@ const safeText = (tag, text, className) => {
 };
 
 const settings = Object.assign(
-  { voiceReplies: true, saveChat: true, shareMemoryWithAI: false, syncToken: "", voiceName: "", voiceLang: "" },
+  { voiceReplies: true, saveChat: true, shareMemoryWithAI: false, syncToken: "", voiceName: "", voiceLang: "", voiceRate: 1, voicePitch: 1 },
   safeRead(KEYS.settings, {})
 );
 
@@ -62,6 +62,8 @@ function speak(text, force = false) {
     utterance.voice = voice;
     utterance.lang = voice.lang;
   }
+  utterance.rate = Math.min(1.25, Math.max(0.75, Number(settings.voiceRate) || 1));
+  utterance.pitch = Math.min(1.3, Math.max(0.7, Number(settings.voicePitch) || 1));
   window.speechSynthesis.speak(utterance);
 }
 
@@ -401,6 +403,11 @@ function mergeSyncRecords(localItems, remoteItems, kind) {
   return Array.from(merged.values());
 }
 
+function stableSyncRecords(items, kind) {
+  return mergeSyncRecords([], items, kind)
+    .sort((a, b) => a.id.localeCompare(b.id));
+}
+
 let syncInProgress = false;
 
 async function syncRequest(action, data) {
@@ -417,7 +424,7 @@ async function syncRequest(action, data) {
   return result;
 }
 
-async function syncNow(silent = false) {
+async function syncNow(silent = false, forcePush = true) {
   if (!settings.syncToken) {
     if ($("syncStatus")) $("syncStatus").textContent = "Primero crea y guarda una clave de sincronización.";
     if (!silent) say("Primero introduce y guarda tu clave de sincronización.");
@@ -436,12 +443,17 @@ async function syncNow(silent = false) {
     const remoteTasks = Array.isArray(remote.data?.tasks) ? remote.data.tasks : [];
     const notes = mergeSyncRecords(read(KEYS.notes), remoteNotes, "note");
     const tasks = mergeSyncRecords(read(KEYS.tasks), remoteTasks, "task");
+    const changedRemotely =
+      JSON.stringify(stableSyncRecords(notes, "note")) !== JSON.stringify(stableSyncRecords(remoteNotes, "note")) ||
+      JSON.stringify(stableSyncRecords(tasks, "task")) !== JSON.stringify(stableSyncRecords(remoteTasks, "task"));
 
     write(KEYS.notes, notes);
     write(KEYS.tasks, tasks);
     renderAll();
 
-    await syncRequest("sync_push", { notes, tasks });
+    if (forcePush || changedRemotely) {
+      await syncRequest("sync_push", { notes, tasks });
+    }
     if (status) status.textContent = "Sincronizado · " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
     if (!silent) say("Memoria y tareas sincronizadas con tus otros dispositivos.");
     return true;
@@ -470,9 +482,21 @@ async function askJarvis(text) {
     history.push({ role: "user", text });
   }
 
-  const memory = settings.shareMemoryWithAI
-    ? read(KEYS.notes).slice(0, 12).map(note => String(note.text || "").slice(0, 250))
-    : [];
+  const memory = [];
+  if (settings.shareMemoryWithAI) {
+    const notes = read(KEYS.notes)
+      .filter(note => !note.deletedAt)
+      .slice(0, 10)
+      .map(note => "Nota guardada: " + String(note.text || "").slice(0, 220));
+    const tasks = read(KEYS.tasks)
+      .filter(task => !task.deletedAt)
+      .slice(0, 10)
+      .map(task => (task.done ? "Tarea completada: " : "Tarea pendiente: ") +
+        String(task.text || "").slice(0, 160) +
+        (task.due ? " · Fecha: " + formatDue(task.due) : ""));
+    memory.push(...notes, ...tasks);
+    memory.push("Fecha y hora local del usuario: " + new Date().toLocaleString("es-ES"));
+  }
 
   try {
     const response = await fetch(AI_ENDPOINT, {
@@ -735,6 +759,10 @@ $("voiceReplies").checked = settings.voiceReplies;
 $("saveChat").checked = settings.saveChat;
 $("shareMemoryWithAI").checked = settings.shareMemoryWithAI;
 $("syncTokenInput").value = settings.syncToken || "";
+$("voiceRate").value = String(settings.voiceRate || 1);
+$("voicePitch").value = String(settings.voicePitch || 1);
+$("voiceRateValue").textContent = Number($("voiceRate").value).toFixed(2) + "×";
+$("voicePitchValue").textContent = Number($("voicePitch").value).toFixed(2);
 refreshVoiceList();
 if ("speechSynthesis" in window) {
   window.speechSynthesis.addEventListener("voiceschanged", refreshVoiceList);
@@ -751,6 +779,15 @@ $("voiceSelect").addEventListener("change", event => {
   }
   saveSettings();
 });
+function saveVoiceTuning() {
+  settings.voiceRate = Number($("voiceRate").value);
+  settings.voicePitch = Number($("voicePitch").value);
+  $("voiceRateValue").textContent = settings.voiceRate.toFixed(2) + "×";
+  $("voicePitchValue").textContent = settings.voicePitch.toFixed(2);
+  saveSettings();
+}
+$("voiceRate").addEventListener("input", saveVoiceTuning);
+$("voicePitch").addEventListener("input", saveVoiceTuning);
 $("testVoice").addEventListener("click", () => {
   if (!("speechSynthesis" in window)) {
     say("Este navegador no permite cambiar la voz.");
@@ -877,7 +914,16 @@ setInterval(checkReminders, 15000);
 document.addEventListener("visibilitychange", () => {
   if (!document.hidden) checkReminders();
 });
-window.addEventListener("focus", checkReminders);
+window.addEventListener("focus", () => {
+  checkReminders();
+  if (settings.syncToken) syncNow(true, false);
+});
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && settings.syncToken) syncNow(true, false);
+});
+window.setInterval(() => {
+  if (!document.hidden && settings.syncToken) syncNow(true, false);
+}, 60000);
 if (settings.syncToken) {
   window.setTimeout(() => syncNow(true), 1200);
 }
