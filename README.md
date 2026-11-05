@@ -1,44 +1,55 @@
 # J.A.R.V.I.S. — Asistente personal
 
-Aplicación web personal en español, adaptable a móvil y ordenador. Se puede instalar como aplicación web y dispone de caché para abrir la interfaz sin conexión después de la primera carga.
+Aplicación web personal en español para móvil y ordenador.
 
-## Funciones actuales
+## Funciones
 
-- Chat con IA mediante Cloudflare Workers AI, a través de un Worker seguro.
-- Reconocimiento de voz y respuestas habladas en navegadores compatibles.
-- Memoria de notas guardadas localmente en el navegador.
-- Uso opcional de las notas como contexto de IA: está desactivado por defecto y se activa desde Herramientas.
-- Tareas con prioridad y fecha/hora.
-- Recordatorios mediante notificaciones del navegador mientras JARVIS permanece abierto.
-- Comandos en español para añadir tareas, programar recordatorios, guardar notas, consultar tareas y memoria, conocer fecha/hora y abrir Google Calendar, Drive o Gmail.
-- Exportar e importar copias de seguridad JSON.
-- Ajustes para voz, guardado del historial y uso de memoria por la IA.
-- Instalación como aplicación web cuando el navegador lo admita.
+- Chat con IA mediante Cloudflare Workers AI.
+- Reconocimiento de voz y respuestas habladas con selección de una voz instalada en cada dispositivo.
+- Memoria de notas y tareas guardada localmente.
+- Sincronización opcional de notas y tareas entre dispositivos mediante Cloudflare D1.
+- Recordatorios del navegador mientras JARVIS permanece abierto.
+- Uso opcional de notas como contexto para la IA, desactivado por defecto.
+- Importación y exportación de copias de seguridad JSON.
 
-## Publicación de la web
+## Configuración del Worker
 
-El repositorio incluye un flujo de GitHub Actions para publicar el sitio. En GitHub, abre **Settings → Pages** y comprueba que el origen esté configurado como **GitHub Actions**. Los cambios de `index.html`, `app.js`, `styles.css` y los archivos públicos se publican desde la rama principal cuando termina el flujo.
+El Worker necesita estos bindings:
+- Workers AI: variable `AI`.
+- D1 database: variable `DB`.
 
-## Configuración de Cloudflare Workers AI
+Y este secreto:
+- `JARVIS_SYNC_TOKEN`: clave privada aleatoria de al menos 32 caracteres. No debe publicarse en GitHub ni enviarse por el chat.
 
-El archivo `worker.js` utiliza el binding de Workers AI llamado exactamente `AI` y el modelo `@cf/zai-org/glm-4.7-flash`.
+### Crear D1 para sincronización
 
-Si cambias `worker.js` en GitHub, también debes actualizar el código del Worker en el panel de Cloudflare y pulsar **Deploy**, salvo que hayas configurado despliegues automáticos de Workers desde GitHub.
+1. En Cloudflare, abre **Storage & Databases → D1 SQL Database** y crea una base de datos, por ejemplo `jarvis-memory`.
+2. Abre **Workers & Pages → mi-jarvis → Settings → Bindings**.
+3. Añade un binding de tipo **D1 database**.
+4. En **Variable name** escribe exactamente `DB` y selecciona la base de datos que acabas de crear.
+5. Guarda y despliega.
 
-El Worker solo acepta solicitudes desde el dominio GitHub Pages de este proyecto. Esta restricción de origen ayuda a evitar llamadas desde otras webs, pero no sustituye un sistema de autenticación ni constituye un límite de uso.
+La tabla `jarvis_vault` se crea automáticamente la primera vez que se usa la sincronización; no necesitas ejecutar SQL a mano.
 
-## Memoria, privacidad y recordatorios
+### Proteger y activar la sincronización
 
-- Las notas, tareas y conversaciones se guardan en el almacenamiento local del navegador. No se sincronizan entre el ordenador y el móvil.
-- La opción **Permitir que la IA consulte mis notas guardadas** está desactivada por defecto. Al activarla, las notas recientes se envían a Cloudflare Workers AI como contexto al conversar.
-- No guardes contraseñas, claves API ni información privada o sensible en la memoria.
-- Los recordatorios locales necesitan permiso de notificaciones. La página debe seguir abierta; el navegador o el sistema operativo pueden suspender la actividad en segundo plano, por lo que no son avisos garantizados.
-- Exporta copias de seguridad periódicamente si quieres conservar tus notas y tareas al cambiar de navegador o dispositivo.
+1. En **mi-jarvis → Settings → Variables and Secrets**, crea un secreto llamado exactamente `JARVIS_SYNC_TOKEN`.
+2. Como valor, utiliza una clave aleatoria y única de al menos 32 caracteres. No reutilices la contraseña de tu correo, GitHub o Cloudflare.
+3. Guarda y despliega el Worker.
+4. Abre JARVIS → **Herramientas**.
+5. Pega esa misma clave en **Clave de sincronización** y pulsa **Guardar clave y sincronizar**.
+6. En el otro dispositivo, abre la web y pega la misma clave en el mismo apartado.
 
-## Límites actuales
+La clave se guarda en el almacenamiento local del navegador y se envía al Worker únicamente en la petición de sincronización. No se añade al repositorio ni se envía al modelo de IA.
 
-- La memoria es local al navegador y no sincroniza dispositivos.
-- La investigación abre búsquedas web; JARVIS todavía no navega por páginas ni resume resultados automáticamente.
-- JARVIS no puede controlar libremente otras aplicaciones ni acceder a archivos privados del dispositivo.
-- Los avisos no funcionan como un servicio de recordatorios en la nube cuando la página está cerrada.
-- Para integrar cuentas externas se necesitarán permisos explícitos y conexiones seguras.
+Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz permanecen locales. La selección de voz debe hacerse por separado en cada dispositivo porque las voces disponibles dependen del sistema y del navegador.
+
+## Privacidad y límites
+
+- No guardes contraseñas, claves API ni datos privados o sensibles en las notas.
+- La sincronización requiere conocer la clave privada configurada en Cloudflare.
+- Las notas solo se envían al modelo de IA como contexto si activas expresamente esa opción.
+- Los recordatorios locales no son fiables con la página cerrada o suspendida.
+- D1 ofrece una modalidad gratuita con límites de uso; consulta los límites vigentes de Cloudflare.
+- La investigación abre búsquedas web y no lee automáticamente páginas.
+- La página no puede controlar libremente otras aplicaciones ni leer archivos privados del dispositivo.
