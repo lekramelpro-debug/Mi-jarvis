@@ -1,4 +1,4 @@
-/* JARVIS 0.7 — memoria contextual, voz y recordatorios locales */
+/* JARVIS 0.9 — mensajes largos, comandos de voz más tolerantes y respuesta optimizada */
 "use strict";
 
 const $ = id => document.getElementById(id);
@@ -494,9 +494,10 @@ async function syncNow(silent = false, forcePush = true) {
 
 
 async function askJarvis(text) {
-  const history = read(KEYS.chat).slice(-14).map(message => ({
+  const saved = read(KEYS.chat).slice(-8);
+  const history = saved.map((message, index) => ({
     role: message.who === "assistant" ? "model" : "user",
-    text: String(message.text || "").slice(0, 1600)
+    text: String(message.text || "").slice(index === saved.length - 1 && message.who !== "assistant" ? 0 : -1800)
   }));
 
   if (
@@ -560,12 +561,13 @@ async function processCommand(raw) {
   if (!text) return;
   say(text, "user");
 
-  const low = text.toLocaleLowerCase("es");
+  const commandText = text.replace(/^[\s.,;:¡¿]*(?:(?:oye|hey|hola)\s+)?jarvis[\s,.:;¡¿-]*/i, "").trim() || text;
+  const low = commandText.toLocaleLowerCase("es");
   let reply = "";
   let useAI = false;
   let match;
 
-  match = text.match(/^(?:agéndame|agendame|agenda|programa|añade al calendario|anota en el calendario)\s+(.+)/i);
+  match = commandText.match(/^(?:agéndame|agendame|agenda|programa|añade al calendario|anota en el calendario)\s+(.+)/i);
   if (match) {
     const schedule = extractSchedule(match[1], false);
     const hasClearTime = schedule.hasTime;
@@ -579,7 +581,7 @@ async function processCommand(raw) {
         reply = "No he podido preparar el evento. Comprueba la fecha y la hora.";
       }
     }
-  } else if ((match = text.match(/^(?:recuérdame|recuerdame|avísame|avisame)\s+(.+)/i))) {
+  } else if ((match = commandText.match(/^(?:recuérdame|recuerdame|avísame|avisame)\s+(.+)/i))) {
     const schedule = extractSchedule(match[1], true);
     const taskText = schedule.text || "Recordatorio";
     if (!schedule.due) {
@@ -590,21 +592,21 @@ async function processCommand(raw) {
       reply = "He programado el recordatorio de «" + taskText + "» para " +
         dueDescription(schedule.due) + ". Para recibir el aviso, activa las notificaciones y mantén JARVIS abierto.";
     }
-  } else if ((match = text.match(/^(?:añade|agrega|crea|apunta)\s+(?:una\s+)?tarea\s+(?:de\s+)?(.+)/i))) {
+  } else if ((match = commandText.match(/^(?:añade|agrega|crea|apunta)\s+(?:una\s+)?tarea\s+(?:de\s+)?(.+)/i))) {
     const schedule = extractSchedule(match[1], false);
     const taskText = schedule.text || "Nueva tarea";
     addTask(taskText, "Normal", schedule.due);
     reply = "He añadido la tarea: " + taskText +
       (schedule.due ? " · Fecha: " + dueDescription(schedule.due) : "") + ".";
-  } else if ((match = text.match(/^(?:guarda|anota|recuerda)\s+(?:que\s+)?(.+)/i))) {
+  } else if ((match = commandText.match(/^(?:guarda|anota|recuerda)\s+(?:que\s+)?(.+)/i))) {
     addNote(match[1]);
     reply = "He guardado en memoria: " + match[1] + ".";
-  } else if (/^(?:busca|investiga|buscar)\s+(.+)/i.test(text)) {
-    const query = text.replace(/^(?:busca|investiga|buscar)\s+/i, "");
+  } else if (/^(?:busca|investiga|buscar)\s+(.+)/i.test(commandText)) {
+    const query = commandText.replace(/^(?:busca|investiga|buscar)\s+/i, "");
     window.open("https://www.google.com/search?q=" + encodeURIComponent(query), "_blank", "noopener,noreferrer");
     reply = "He abierto una búsqueda sobre: " + query + ".";
-  } else if (/^(?:abre|inicia)\s+(calendar|calendario|drive|gmail|correo)/i.test(text)) {
-    const app = text.match(/(calendar|calendario|drive|gmail|correo)/i)[0].toLowerCase();
+  } else if (/^(?:abre|inicia)\s+(calendar|calendario|drive|gmail|correo)/i.test(commandText)) {
+    const app = commandText.match(/(calendar|calendario|drive|gmail|correo)/i)[0].toLowerCase();
     const urls = {
       calendar: "https://calendar.google.com/",
       calendario: "https://calendar.google.com/",
