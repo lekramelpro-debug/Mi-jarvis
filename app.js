@@ -418,7 +418,12 @@ async function syncRequest(action, data) {
 }
 
 async function syncNow(silent = false) {
-  if (!settings.syncToken || syncInProgress) return false;
+  if (!settings.syncToken) {
+    if ($("syncStatus")) $("syncStatus").textContent = "Primero crea y guarda una clave de sincronización.";
+    if (!silent) say("Primero introduce y guarda tu clave de sincronización.");
+    return false;
+  }
+  if (syncInProgress) return false;
   syncInProgress = true;
   const button = $("syncNow");
   const status = $("syncStatus");
@@ -752,6 +757,30 @@ $("testVoice").addEventListener("click", () => {
     return;
   }
   speak("Hola. Soy JARVIS. Esta es una prueba de la voz que has seleccionado.", true);
+});
+$("generateSyncToken").addEventListener("click", () => {
+  if (!crypto || typeof crypto.getRandomValues !== "function") {
+    say("Este navegador no permite generar una clave segura.");
+    return;
+  }
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const token = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+  $("syncTokenInput").value = token;
+  $("syncStatus").textContent = "Clave generada. Cópiala a Cloudflare como secreto JARVIS_SYNC_TOKEN y después guárdala aquí.";
+});
+$("copySyncToken").addEventListener("click", async () => {
+  const token = $("syncTokenInput").value.trim();
+  if (!token) {
+    say("Primero genera una clave de sincronización.");
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(token);
+    say("Clave copiada. Pégala en Cloudflare como secreto JARVIS_SYNC_TOKEN. No la compartas por el chat.");
+  } catch {
+    say("No he podido copiarla automáticamente. Selecciona el contenido del campo y cópialo manualmente.");
+  }
 });
 $("saveSyncToken").addEventListener("click", async () => {
   const token = $("syncTokenInput").value.trim();
