@@ -759,12 +759,12 @@ $("testVoice").addEventListener("click", () => {
   speak("Hola. Soy JARVIS. Esta es una prueba de la voz que has seleccionado.", true);
 });
 $("generateSyncToken").addEventListener("click", () => {
-  if (!crypto || typeof crypto.getRandomValues !== "function") {
+  if (!window.crypto || typeof window.crypto.getRandomValues !== "function") {
     say("Este navegador no permite generar una clave segura.");
     return;
   }
   const bytes = new Uint8Array(32);
-  crypto.getRandomValues(bytes);
+  window.crypto.getRandomValues(bytes);
   const token = Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
   $("syncTokenInput").value = token;
   $("syncStatus").textContent = "Clave generada. Cópiala a Cloudflare como secreto JARVIS_SYNC_TOKEN y después guárdala aquí.";
