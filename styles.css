@@ -14,3 +14,12 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .settings-row label{line-height:1.4}
 .notice{line-height:1.55}
 @media(max-width:600px){.task-form input[type="datetime-local"]{flex-basis:100%}}
+
+
+/* Ajustes de memoria compartida y selección de voz */
+.voice-settings,.sync-settings{display:grid;gap:9px;margin:14px 0;padding:15px;background:#0a1928;border:1px solid #173b53;border-radius:10px}
+.voice-settings label,.sync-settings label{color:var(--cyan);font-size:13px}
+.voice-settings select,.sync-settings input{width:100%;min-width:0;background:#071522;border:1px solid #28516a;border-radius:9px;padding:12px;color:var(--text);font:inherit}
+.voice-settings .hint,.sync-settings .hint{display:block;line-height:1.5}
+.sync-settings .hero-actions{margin-top:3px}
+@media(max-width:600px){.sync-settings .hero-actions{flex-direction:column}.sync-settings .btn{width:100%}}
