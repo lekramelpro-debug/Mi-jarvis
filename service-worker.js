@@ -1,4 +1,4 @@
-const CACHE_NAME = "jarvis-cache-v16";
+const CACHE_NAME = "jarvis-cache-v17";
 const FILES = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest"];
 
 self.addEventListener("install", event => {
