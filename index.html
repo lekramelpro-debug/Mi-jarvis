@@ -53,6 +53,18 @@
   <small id="voiceSupport" class="hint">Cargando voces disponibles…</small>
 </div>
 <div class="divider"></div>
+<h3>Personalidad y forma de trabajar</h3>
+<p class="muted">Escribe aquí cómo quieres que JARVIS se comporte contigo y cómo debe ayudarte en tus proyectos. Estas instrucciones se guardan en este dispositivo y se envían a la IA cuando conversas.</p>
+<div class="personality-settings">
+  <label for="personalityInput">Instrucciones personales de JARVIS</label>
+  <textarea id="personalityInput" maxlength="6000" rows="9" placeholder="Ejemplo: Actúa como mi asesor estratégico para dropshipping. Ayúdame a validar productos, analizar márgenes, preparar ofertas y priorizar tareas. Sé directo, realista y exigente sin ser desagradable. No me des la razón por sistema: señala errores y explícame cómo mejorar. Adapta los pasos a mi presupuesto y experiencia."></textarea>
+  <div class="hero-actions">
+    <button class="btn primary" id="savePersonality" type="button">Guardar comportamiento</button>
+    <button class="btn secondary" id="resetPersonality" type="button">Borrar instrucciones</button>
+  </div>
+  <small id="personalityStatus" class="hint">Las instrucciones se aplicarán a las próximas respuestas de la IA.</small>
+</div>
+<div class="divider"></div>
 <h3>Memoria sincronizada entre dispositivos</h3>
 <p class="muted">Conecta una base de datos D1 para compartir notas y tareas entre el ordenador y el móvil. La clave se guarda en este navegador y se utiliza únicamente para la sincronización.</p>
 <div class="sync-settings">
