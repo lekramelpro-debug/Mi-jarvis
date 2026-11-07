@@ -582,9 +582,9 @@ async function processCommandInternal(raw) {
   let useAI = false;
   let match;
 
-  match = commandText.match(/^(?:(?:por favor)\\s*)?(?:agéndame|agendame|agenda|programa|añade|anade|agrega|crea|pon|ponme|mete|meteme|anota)\\s+(?:(?:una?|el|la)\\s+)?(?:(?:cita|reunión|reunion|evento)\\s+)?(?:(?:en|al)\\s+(?:mi\\s+)?calendario\\s+)?(.+)/i);
-  if (match && /\\b(?:mañana|pasado mañana|hoy|\\d{1,2}[/-]\\d{1,2}|a\\s+las\\s+) /i.test(match[1] + " ")) {
-    const calendarDetails = match[1].replace(/\\b(?:en|al)\\s+(?:mi\\s+)?calendario\\b/ig, " ").trim();
+  match = commandText.match(/^(?:(?:por favor)\s*)?(?:agéndame|agendame|agenda|programa|añade|anade|agrega|crea|pon|ponme|mete|meteme|anota)\s+(?:(?:una?|el|la)\s+)?(?:(?:cita|reunión|reunion|evento)\s+)?(?:(?:en|al)\s+(?:mi\s+)?calendario\s+)?(.+)/i);
+  if (match && /\b(?:mañana|pasado mañana|hoy|\d{1,2}[/-]\d{1,2}|a\s+las\s+)/i.test(match[1])) {
+    const calendarDetails = match[1].replace(/\b(?:en|al)\s+(?:mi\s+)?calendario\b/ig, " ").trim();
     const schedule = extractSchedule(calendarDetails, false);
     const hasClearTime = schedule.hasTime;
     if (!schedule.hasDate || !hasClearTime || schedule.timeAmbiguous) {
