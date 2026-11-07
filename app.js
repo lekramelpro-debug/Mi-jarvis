@@ -543,14 +543,14 @@ async function askJarvis(text) {
 }
 
 function describePendingTasks() {
-  const pending = read(KEYS.tasks).filter(task => !task.done);
+  const pending = read(KEYS.tasks).filter(task => !task.done && !task.deletedAt);
   if (!pending.length) return "No tienes tareas pendientes.";
   return "Tienes " + pending.length + " tareas pendientes: " +
     pending.map(task => task.text + (task.due ? " (" + dueDescription(task.due) + ")" : "")).join("; ");
 }
 
 function describeMemory() {
-  const notes = read(KEYS.notes);
+  const notes = read(KEYS.notes).filter(note => !note.deletedAt);
   if (!notes.length) return "Todavía no tienes notas guardadas.";
   return "Tienes " + notes.length + " notas guardadas. " +
     notes.slice(0, 5).map((note, index) => (index + 1) + ". " + note.text).join(" ");
@@ -802,13 +802,9 @@ $("voiceBtn").addEventListener("click", () => {
       if (event.results[i].isFinal) finalTranscript += part + " ";
       else interim += part;
     }
-    if (interim.trim()) {
-      $("systemState").textContent = "TE ESCUCHO: " + interim.trim().slice(0, 48);
-    }
-    if (finalTranscript.trim() && !submitted) {
-      submitted = true;
-      $("systemState").textContent = "TRANSCRIPCIÓN LISTA";
-      processCommand(finalTranscript.trim());
+    const heard = (finalTranscript + " " + interim).trim();
+    if (heard) {
+      $("systemState").textContent = (finalTranscript.trim() ? "TE ESCUCHO: " + heard : "TE ESCUCHO: " + interim.trim()).slice(0, 58);
     }
   };
 
@@ -823,9 +819,11 @@ $("voiceBtn").addEventListener("click", () => {
   recognition.onend = () => {
     $("voiceBtn").disabled = false;
     $("voiceBtn").textContent = "🎙 Hablar con JARVIS";
-    if (!submitted && finalTranscript.trim()) {
+    const completeTranscript = finalTranscript.trim();
+    if (completeTranscript && !submitted) {
       submitted = true;
-      processCommand(finalTranscript.trim());
+      $("systemState").textContent = "TRANSCRIPCIÓN LISTA";
+      processCommand(completeTranscript);
     } else if ($("systemState").textContent === "ESCUCHANDO" ||
                $("systemState").textContent.startsWith("TE ESCUCHO:")) {
       $("systemState").textContent = "ASISTENTE CONECTADO";
