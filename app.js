@@ -37,7 +37,7 @@ const safeText = (tag, text, className) => {
 };
 
 const settings = Object.assign(
-  { voiceReplies: true, saveChat: true, shareMemoryWithAI: false, syncToken: "", voiceName: "", voiceLang: "", voiceRate: 1, voicePitch: 1 },
+  { voiceReplies: true, saveChat: true, shareMemoryWithAI: false, syncToken: "", voiceName: "", voiceLang: "", voiceRate: 0.96, voicePitch: 0.98, personality: "" },
   safeRead(KEYS.settings, {})
 );
 
@@ -55,16 +55,42 @@ function getSelectedVoice() {
 function speak(text, force = false) {
   if ((!settings.voiceReplies && !force) || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "es-ES";
+
+  const clean = String(text || "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/[*_`#]/g, "")
+    .replace(/^\s*[-•]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean) return;
+
   const voice = getSelectedVoice();
-  if (voice) {
-    utterance.voice = voice;
-    utterance.lang = voice.lang;
-  }
-  utterance.rate = Math.min(1.25, Math.max(0.75, Number(settings.voiceRate) || 1));
-  utterance.pitch = Math.min(1.3, Math.max(0.7, Number(settings.voicePitch) || 1));
-  window.speechSynthesis.speak(utterance);
+  const rate = Math.min(1.2, Math.max(0.8, Number(settings.voiceRate) || 0.96));
+  const pitch = Math.min(1.2, Math.max(0.8, Number(settings.voicePitch) || 0.98));
+  const sentences = clean.match(/[^.!?…]+[.!?…]*/g) || [clean];
+  const chunks = [];
+  let current = "";
+  sentences.forEach(sentence => {
+    const part = sentence.trim();
+    if (!part) return;
+    if ((current + " " + part).trim().length > 220 && current) {
+      chunks.push(current.trim());
+      current = part;
+    } else {
+      current = (current + " " + part).trim();
+    }
+  });
+  if (current) chunks.push(current);
+
+  chunks.forEach((chunk, index) => {
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.lang = voice?.lang || "es-ES";
+    if (voice) utterance.voice = voice;
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+    utterance.volume = 1;
+    window.speechSynthesis.speak(utterance);
+  });
 }
 
 function refreshVoiceList() {
@@ -528,7 +554,7 @@ async function askJarvis(text) {
     const response = await fetch(AI_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: history, memory })
+      body: JSON.stringify({ messages: history, memory, personality: String(settings.personality || "").slice(0, 6000) })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "No se pudo obtener respuesta.");
@@ -887,7 +913,27 @@ function saveVoiceTuning() {
   saveSettings();
 }
 $("voiceRate").addEventListener("input", saveVoiceTuning);
+
 $("voicePitch").addEventListener("input", saveVoiceTuning);
+
+const personalityInput = $("personalityInput");
+if (personalityInput) personalityInput.value = String(settings.personality || "");
+$("savePersonality").addEventListener("click", () => {
+  settings.personality = String(personalityInput.value || "").trim().slice(0, 6000);
+  personalityInput.value = settings.personality;
+  saveSettings();
+  $("personalityStatus").textContent = settings.personality
+    ? "Comportamiento guardado. JARVIS lo aplicará en las próximas respuestas de IA."
+    : "No hay instrucciones personalizadas. JARVIS utilizará su comportamiento predeterminado.";
+  say("He guardado tus instrucciones de comportamiento.");
+});
+$("resetPersonality").addEventListener("click", () => {
+  personalityInput.value = "";
+  settings.personality = "";
+  saveSettings();
+  $("personalityStatus").textContent = "Instrucciones borradas. Se utilizará el comportamiento predeterminado.";
+  say("He borrado las instrucciones personalizadas.");
+});
 $("testVoice").addEventListener("click", () => {
   if (!("speechSynthesis" in window)) {
     say("Este navegador no permite cambiar la voz.");
