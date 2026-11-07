@@ -861,6 +861,56 @@ const coachPrompts = {
   alterego: "Activa mi modo de disciplina: dame una misión breve para hoy que entrene constancia, autocontrol, calma y comunicación segura. Que sea concreta, medible y compatible con mis estudios, descanso y deporte. No quiero frases vacías: quiero una acción que pueda completar.",
   revision: "Haz conmigo una revisión semanal breve y honesta de mis tres áreas: dropshipping, rendimiento deportivo y alter ego. Pregúntame qué hice, qué resultado observé, qué obstáculo apareció y qué aprendí. Después ayúdame a elegir una prioridad y un siguiente paso realista para cada área, sin sobrecargar mi horario."
 };
+
+const dailySkills = [
+  {name:"Comunicación clara",desc:"Expresar lo que piensas con orden, calma y precisión.",practice:"Explica una idea en 30 segundos: primero la conclusión y después dos razones.",prompt:"Entréname en comunicación clara. Enséñame una técnica, ponme un ejercicio práctico de 5 minutos y hazme practicar aquí. Dame feedback específico sobre claridad, estructura y respeto, sin hacer el ejercicio por mí."},
+  {name:"Escucha activa",desc:"Comprender antes de responder y hacer preguntas que aporten.",practice:"En una conversación, resume con tus palabras lo que la otra persona quiso decir antes de dar tu opinión.",prompt:"Entréname en escucha activa con una simulación breve. Enséñame a escuchar, resumir y preguntar sin interrumpir. Haz de interlocutor y evalúa mis respuestas."},
+  {name:"Hablar con seguridad",desc:"Transmitir confianza sin imponerte ni fingir saberlo todo.",practice:"Expón una opinión con esta estructura: «Pienso que… porque…; aunque también veo…». ",prompt:"Entréname para hablar con seguridad. Haz una práctica guiada de exposición breve, corrige muletillas o falta de claridad y enséñame a reconocer con naturalidad lo que no sé."},
+  {name:"Negociación",desc:"Buscar acuerdos justos entendiendo intereses y alternativas.",practice:"Piensa en una situación cotidiana y escribe qué necesitas tú y qué podría necesitar la otra persona.",prompt:"Enséñame negociación ética desde cero con un caso cotidiano. Practiquemos preguntas, intereses, propuestas y acuerdos justos; nada de manipulación ni presión."},
+  {name:"Pensamiento crítico",desc:"Separar hechos, opiniones, suposiciones y pruebas.",practice:"Elige una afirmación que hayas visto hoy y apunta qué evidencia la apoyaría o la debilitaría.",prompt:"Entréname en pensamiento crítico con una afirmación o caso. Ayúdame a distinguir hechos, opiniones, hipótesis y evidencias, y hazme justificar mi conclusión."},
+  {name:"Autocontrol",desc:"Elegir la respuesta adecuada en vez de reaccionar por impulso.",practice:"Antes de responder a algo que te moleste, haz una pausa y formula una respuesta calmada.",prompt:"Entréname en autocontrol con una situación cotidiana. Practiquemos una pausa, identificar opciones y elegir una respuesta firme y respetuosa."},
+  {name:"Disciplina y constancia",desc:"Cumplir compromisos pequeños incluso cuando baja la motivación.",practice:"Elige una tarea importante y trabaja en ella durante 10 minutos sin cambiar de actividad.",prompt:"Ayúdame a entrenar disciplina sostenible. Diseña una misión de 10 minutos, anticipa una distracción probable y enséñame a volver a la tarea sin culpabilizarme."},
+  {name:"Pensamiento estratégico",desc:"Priorizar lo importante y anticipar consecuencias.",practice:"Antes de empezar una tarea, escribe el resultado que buscas y el siguiente paso más útil.",prompt:"Entréname en pensamiento estratégico con un problema realista. Hazme definir objetivo, restricciones, opciones, riesgos y primer paso."},
+  {name:"Liderazgo",desc:"Dar ejemplo, asumir responsabilidad y ayudar al equipo a avanzar.",practice:"Ofrece ayuda concreta a alguien de tu equipo o clase y escucha qué necesita.",prompt:"Enséñame liderazgo responsable. Practiquemos cómo organizar un pequeño equipo, repartir tareas, escuchar y asumir errores sin mandar ni intimidar."},
+  {name:"Gestión del tiempo",desc:"Proteger prioridades y dejar espacio para descansar.",practice:"Elige las tres prioridades reales de hoy y decide cuál es la primera.",prompt:"Entréname en gestión del tiempo. Ayúdame a priorizar estudios, descanso, deporte y proyectos sin llenar cada minuto ni sacrificar sueño."},
+  {name:"Resolver problemas",desc:"Dividir un reto grande en partes que puedas abordar.",practice:"Describe un problema y divídelo en tres partes pequeñas que sí puedas controlar.",prompt:"Entréname en resolución de problemas. Guíame con preguntas para definir el problema, encontrar causas, generar opciones y probar un primer paso."},
+  {name:"Asertividad",desc:"Decir lo que necesitas con respeto y límites claros.",practice:"Practica esta frase: «Entiendo tu punto, pero yo prefiero… porque…».",prompt:"Entréname en asertividad con un roleplay cotidiano. Practiquemos decir no, expresar desacuerdo y poner límites con respeto, sin agresividad."},
+  {name:"Aprender más rápido",desc:"Recordar y aplicar lo aprendido, no solo releerlo.",practice:"Recuerda sin mirar tres ideas de algo que hayas estudiado y comprueba después qué faltó.",prompt:"Enséñame técnicas de aprendizaje activo. Hazme una mini prueba de recuerdo, corrige mis lagunas y ayúdame a aplicar lo aprendido."},
+  {name:"Toma de decisiones",desc:"Decidir con información suficiente y aceptar que no hay certeza total.",practice:"Para una decisión pequeña, compara dos opciones con una ventaja y un coste de cada una.",prompt:"Entréname en toma de decisiones. Guíame para comparar opciones, criterios, consecuencias e incertidumbre sin buscar una certeza imposible."}
+];
+const dailySkillDate = new Date().toLocaleDateString("en-CA");
+const dayNumber = Math.floor(new Date(dailySkillDate + "T12:00:00").getTime() / 86400000);
+const dailySkillIndex = ((dayNumber % dailySkills.length) + dailySkills.length) % dailySkills.length;
+const todaySkill = dailySkills[dailySkillIndex];
+const skillProgressKey = "jarvis-daily-skill-progress-v1";
+const skillProgress = safeRead(skillProgressKey, {});
+$("dailySkillNumber").textContent = String(dailySkillIndex + 1).padStart(2,"0") + " / " + String(dailySkills.length).padStart(2,"0");
+$("dailySkillName").textContent = todaySkill.name;
+$("dailySkillDescription").textContent = todaySkill.desc;
+$("dailySkillPractice").textContent = todaySkill.practice;
+function renderDailySkillStatus() {
+  const completed = skillProgress[dailySkillDate] === todaySkill.name;
+  $("dailySkillStatus").textContent = completed
+    ? "Práctica de hoy marcada. Mañana tendrás una habilidad nueva."
+    : "No hace falta hacerlo perfecto: cuenta intentarlo y aprender.";
+  $("completeDailySkill").textContent = completed ? "Práctica completada ✓" : "He practicado hoy";
+  $("completeDailySkill").disabled = completed;
+}
+$("trainDailySkill").addEventListener("click", () => processCommand(
+  "Quiero hacer mi entrenamiento diario de habilidades. La habilidad de hoy es " + todaySkill.name +
+  ". Objetivo: " + todaySkill.desc + " Reto: " + todaySkill.practice + " " + todaySkill.prompt +
+  " Adapta la práctica a mi edad, hazme participar y termina con una valoración concreta y una pequeña forma de aplicar esta habilidad hoy."
+));
+$("completeDailySkill").addEventListener("click", () => {
+  skillProgress[dailySkillDate] = todaySkill.name;
+  if (!write(skillProgressKey, skillProgress)) {
+    $("dailySkillStatus").textContent = "No se ha podido guardar el progreso en este dispositivo.";
+    return;
+  }
+  renderDailySkillStatus();
+});
+renderDailySkillStatus();
+
 document.querySelectorAll("[data-coach]").forEach(button => {
   button.addEventListener("click", () => {
     const prompt = coachPrompts[button.dataset.coach];
