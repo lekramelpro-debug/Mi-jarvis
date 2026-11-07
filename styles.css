@@ -86,3 +86,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .futsal-review-entry strong{color:var(--cyan);font-size:12px}
 .futsal-review-entry p{margin:0;font-size:12px;line-height:1.5;color:var(--text)}
 .futsal-review-entry .btn{width:fit-content;margin-top:5px}
+
+
+/* Panel de revisión integral semanal */
+.weekly-review{margin-top:16px}
+.weekly-review .futsal-review-form{gap:9px}
+.weekly-review .futsal-review-form textarea{min-height:58px}
+.weekly-review .hint{display:block;line-height:1.5;margin-top:8px}
