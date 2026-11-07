@@ -556,7 +556,21 @@ function describeMemory() {
     notes.slice(0, 5).map((note, index) => (index + 1) + ". " + note.text).join(" ");
 }
 
-async function processCommand(raw) {
+let commandQueue = Promise.resolve();
+
+function processCommand(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return commandQueue;
+  commandQueue = commandQueue.then(() => processCommandInternal(text)).catch(error => {
+    $("systemState").textContent = "ERROR";
+    const message = "Ha ocurrido un error al procesar la orden: " + (error?.message || "error desconocido") + ".";
+    say(message);
+    speak(message);
+  });
+  return commandQueue;
+}
+
+async function processCommandInternal(raw) {
   const text = String(raw || "").trim();
   if (!text) return;
   say(text, "user");
@@ -568,9 +582,10 @@ async function processCommand(raw) {
   let useAI = false;
   let match;
 
-  match = commandText.match(/^(?:agéndame|agendame|agenda|programa|añade al calendario|anota en el calendario)\s+(.+)/i);
-  if (match) {
-    const schedule = extractSchedule(match[1], false);
+  match = commandText.match(/^(?:(?:por favor)\\s*)?(?:agéndame|agendame|agenda|programa|añade|anade|agrega|crea|pon|ponme|mete|meteme|anota)\\s+(?:(?:una?|el|la)\\s+)?(?:(?:cita|reunión|reunion|evento)\\s+)?(?:(?:en|al)\\s+(?:mi\\s+)?calendario\\s+)?(.+)/i);
+  if (match && /\\b(?:mañana|pasado mañana|hoy|\\d{1,2}[/-]\\d{1,2}|a\\s+las\\s+) /i.test(match[1] + " ")) {
+    const calendarDetails = match[1].replace(/\\b(?:en|al)\\s+(?:mi\\s+)?calendario\\b/ig, " ").trim();
+    const schedule = extractSchedule(calendarDetails, false);
     const hasClearTime = schedule.hasTime;
     if (!schedule.hasDate || !hasClearTime || schedule.timeAmbiguous) {
       reply = "Puedo preparar el evento en el calendario de tu Samsung. Dime el día y la hora exactos. Si dices «a las seis», aclara si es de la mañana o de la tarde; por ejemplo: «agenda una cita mañana a las seis de la tarde».";
