@@ -554,7 +554,7 @@ async function askJarvis(text) {
     const response = await fetch(AI_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: history, memory, personality: String(settings.personality || "").slice(0, 6000) })
+      body: JSON.stringify({ messages: history, memory, personality: String(settings.personality || "").slice(0, 20000) })
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "No se pudo obtener respuesta.");
@@ -919,7 +919,7 @@ $("voicePitch").addEventListener("input", saveVoiceTuning);
 const personalityInput = $("personalityInput");
 if (personalityInput) personalityInput.value = String(settings.personality || "");
 $("savePersonality").addEventListener("click", () => {
-  settings.personality = String(personalityInput.value || "").trim().slice(0, 6000);
+  settings.personality = String(personalityInput.value || "").trim().slice(0, 20000);
   personalityInput.value = settings.personality;
   saveSettings();
   $("personalityStatus").textContent = settings.personality
