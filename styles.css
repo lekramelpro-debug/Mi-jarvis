@@ -67,3 +67,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .skill-practice span{font-size:13px;line-height:1.5}
 #completeDailySkill:disabled{opacity:.7;cursor:default}
 @media(max-width:600px){.skill-content{gap:11px}.skill-number{flex-basis:48px;width:48px;height:48px;font-size:14px}.skill-copy h4{font-size:16px}}
+
+
+/* Panel de entrenamiento técnico de fútbol sala */
+.futsal-panel{margin-top:16px}
+.futsal-meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin:8px 0;color:var(--muted);font-size:11px}
+#completeFutsal:disabled{opacity:.7;cursor:default}
