@@ -1077,21 +1077,6 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 30000);
 
-// Sincronización automática y discreta mientras JARVIS está abierto.
-let lastAutoSyncAt = 0;
-async function autoSyncIfNeeded() {
-  if (!settings.syncToken || document.visibilityState === "hidden") return;
-  const now = Date.now();
-  if (now - lastAutoSyncAt < 45000) return;
-  lastAutoSyncAt = now;
-  await syncNow(true, false);
-}
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") autoSyncIfNeeded();
-});
-window.addEventListener("focus", autoSyncIfNeeded);
-setInterval(autoSyncIfNeeded, 180000);
-
 restoreChat();
 renderAll();
 $("systemState").textContent = "ASISTENTE CONECTADO";
