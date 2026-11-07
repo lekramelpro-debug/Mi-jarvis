@@ -1,4 +1,4 @@
-/* JARVIS 0.9 — mensajes largos, comandos de voz más tolerantes y respuesta optimizada */
+/* JARVIS 1.0 — estados de voz y procesamiento, reconocimiento progresivo */
 "use strict";
 
 const $ = id => document.getElementById(id);
@@ -560,6 +560,7 @@ async function processCommand(raw) {
   const text = String(raw || "").trim();
   if (!text) return;
   say(text, "user");
+  $("systemState").textContent = "PROCESANDO";
 
   const commandText = text.replace(/^[\s.,;:¡¿]*(?:(?:oye|hey|hola)\s+)?jarvis[\s,.:;¡¿-]*/i, "").trim() || text;
   const low = commandText.toLocaleLowerCase("es");
@@ -638,9 +639,16 @@ async function processCommand(raw) {
     useAI = true;
   }
 
-  if (useAI) reply = await askJarvis(text);
+  if (useAI) {
+    $("systemState").textContent = "CONSULTANDO IA";
+    reply = await askJarvis(text);
+  }
+  $("systemState").textContent = "RESPUESTA LISTA";
   say(reply);
   speak(reply);
+  window.setTimeout(() => {
+    if ($("systemState").textContent === "RESPUESTA LISTA") $("systemState").textContent = "ASISTENTE CONECTADO";
+  }, 1800);
 }
 
 $("memoryForm").addEventListener("submit", event => {
@@ -776,22 +784,61 @@ $("voiceBtn").addEventListener("click", () => {
 
   const recognition = new Recognition();
   recognition.lang = "es-ES";
-  recognition.interimResults = false;
+  recognition.interimResults = true;
   recognition.maxAlternatives = 1;
+  let finalTranscript = "";
+  let submitted = false;
+
   recognition.onstart = () => {
     $("systemState").textContent = "ESCUCHANDO";
     $("voiceBtn").textContent = "🎙 Escuchando…";
+    $("voiceBtn").disabled = true;
   };
-  recognition.onresult = event => processCommand(event.results[0][0].transcript);
-  recognition.onerror = () => say("No he podido reconocer la voz. Comprueba los permisos del micrófono.");
+
+  recognition.onresult = event => {
+    let interim = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const part = event.results[i][0].transcript || "";
+      if (event.results[i].isFinal) finalTranscript += part + " ";
+      else interim += part;
+    }
+    if (interim.trim()) {
+      $("systemState").textContent = "TE ESCUCHO: " + interim.trim().slice(0, 48);
+    }
+    if (finalTranscript.trim() && !submitted) {
+      submitted = true;
+      $("systemState").textContent = "TRANSCRIPCIÓN LISTA";
+      processCommand(finalTranscript.trim());
+    }
+  };
+
+  recognition.onerror = event => {
+    if (event.error !== "no-speech" && event.error !== "aborted") {
+      say("No he podido reconocer la voz. Comprueba los permisos del micrófono e inténtalo otra vez.");
+    } else if (event.error === "no-speech") {
+      say("No he detectado voz. Pulsa el micrófono y vuelve a hablar.");
+    }
+  };
+
   recognition.onend = () => {
-    $("systemState").textContent = "ASISTENTE CONECTADO";
+    $("voiceBtn").disabled = false;
     $("voiceBtn").textContent = "🎙 Hablar con JARVIS";
+    if (!submitted && finalTranscript.trim()) {
+      submitted = true;
+      processCommand(finalTranscript.trim());
+    } else if ($("systemState").textContent === "ESCUCHANDO" ||
+               $("systemState").textContent.startsWith("TE ESCUCHO:")) {
+      $("systemState").textContent = "ASISTENTE CONECTADO";
+    }
   };
+
   try {
     recognition.start();
   } catch {
-    say("El micrófono ya está activo o el navegador no permite iniciar el reconocimiento.");
+    $("voiceBtn").disabled = false;
+    $("voiceBtn").textContent = "🎙 Hablar con JARVIS";
+    $("systemState").textContent = "ASISTENTE CONECTADO";
+    say("El micrófono ya está activo o el navegador no permite iniciarlo.");
   }
 });
 
