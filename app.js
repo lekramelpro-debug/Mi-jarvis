@@ -859,7 +859,9 @@ const coachPrompts = {
   dropshipping: "Quiero trabajar en mi proyecto de dropshipping. Guíame como mentor: primero identifica qué información necesitas sobre el producto, cliente, competencia, precio, costes y presupuesto; después propón una prueba pequeña y realista. Separa datos, hipótesis y cálculos, y termina con una siguiente acción concreta.",
   deporte: "Actúa como mi entrenador educativo de fútbol sala, especializado en porteros. Ayúdame a mejorar colocación, ángulos, posición de base, blocaje, desvíos seguros, desplazamientos, juego con los pies, pase, comunicación con la defensa, lectura de juego y toma de decisiones. Primero pregúntame por el próximo entrenamiento o partido, carga de la semana, cansancio y molestias. Adapta todo a mi edad: prioriza técnica de calidad y sesiones breves, sin impactos ni ejercicios de riesgo sin entrenador. En días con entrenamiento o partido no añadas carga física; ofrece análisis táctico, visualización o recuperación. No inventes estadísticas ni prometas convocatorias. Dame un objetivo, un ejercicio supervisable y una forma de evaluar la ejecución.",
   alterego: "Activa mi modo de disciplina: dame una misión breve para hoy que entrene constancia, autocontrol, calma y comunicación segura. Que sea concreta, medible y compatible con mis estudios, descanso y deporte. No quiero frases vacías: quiero una acción que pueda completar.",
-  revision: "Haz conmigo una revisión semanal breve y honesta de mis tres áreas: dropshipping, rendimiento deportivo y alter ego. Pregúntame qué hice, qué resultado observé, qué obstáculo apareció y qué aprendí. Después ayúdame a elegir una prioridad y un siguiente paso realista para cada área, sin sobrecargar mi horario."
+  revision: "Haz conmigo una revisión semanal breve y honesta de todas mis áreas: dropshipping, estudios, futsal y rendimiento deportivo, disciplina, habilidades personales, inglés/lectura, descanso y equilibrio. Pregunta por hechos y resultados observados, distingue datos de suposiciones y ayúdame a elegir un máximo de tres prioridades para la semana. Respeta mi horario escolar, entrenamientos, partidos, familia y sueño; no llenes todos los huecos.",
+  estudios: "Actúa como tutor de estudio. Pregúntame qué asignatura, tema y fecha de examen o entrega tengo. Ayúdame a entenderlo con explicaciones claras, ejemplos, preguntas activas y ejercicios graduados; no me des solo la respuesta. Detecta qué parte no entiendo, prepara una sesión breve y termina con una comprobación para ver si lo he aprendido. Adapta el plan a mi horario y descanso.",
+  plan: "Ayúdame a organizar los próximos siete días de forma realista. Primero pregunta por compromisos fijos, exámenes/entregas, entrenamientos/partidos, tareas del negocio y energía disponible. Después ordena lo importante, limita las prioridades, deja márgenes y descanso. No inventes huecos de agenda ni programes más carga deportiva en días de entrenamiento o partido. Devuélveme un plan sencillo y una primera acción de 10 minutos."
 };
 
 const dailySkills = [
@@ -1010,6 +1012,66 @@ $("futsalReviewForm").addEventListener("submit", event => {
   say("Revisión guardada. Cuando quieras, podemos analizarla juntos.");
 });
 renderFutsalReviews();
+
+const weeklyReviewKey = "jarvis-weekly-reviews-v1";
+let weeklyReviews = safeRead(weeklyReviewKey, []);
+if (!Array.isArray(weeklyReviews)) weeklyReviews = [];
+function renderWeeklyReviews() {
+  const list = $("weeklyReviewList");
+  list.replaceChildren();
+  $("weeklyReviewCount").textContent = weeklyReviews.length + " guardadas";
+  if (!weeklyReviews.length) {
+    list.append(safeText("p", "Todavía no hay revisiones semanales.", "muted"));
+    return;
+  }
+  weeklyReviews.slice(0,3).forEach(review => {
+    const card = safeText("article", "", "futsal-review-entry");
+    const heading = safeText("strong", "Semana del " + new Date(review.date).toLocaleDateString("es-ES"));
+    const summary = safeText("p", review.summary);
+    const analyse = safeText("button", "Volver a analizar", "btn secondary");
+    analyse.type = "button";
+    analyse.addEventListener("click", () => processCommand(
+      "Analiza esta revisión integral de mi semana y ayúdame a preparar los próximos siete días. " +
+      review.summary +
+      " Separa hechos de suposiciones, reconoce avances reales, detecta el principal obstáculo y propone como máximo tres prioridades y una primera acción pequeña. Respeta estudios, edad, entrenamientos, descanso y vida personal. No inventes resultados ni me sobrecargues."
+    ));
+    card.append(heading,summary,analyse);
+    list.append(card);
+  });
+}
+$("weeklyReviewForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const fields = [
+    ["Negocio y dropshipping", $("weeklyBusiness").value],
+    ["Estudios", $("weeklyStudies").value],
+    ["Deporte y futsal", $("weeklySport").value],
+    ["Disciplina y desarrollo personal", $("weeklyHabits").value],
+    ["Energía, descanso y equilibrio", $("weeklyWellbeing").value]
+  ].map(([label,value]) => ({label,value:value.trim()})).filter(item => item.value);
+  if (!fields.length) {
+    say("Escribe al menos una línea sobre tu semana para poder analizarla.");
+    return;
+  }
+  const review = {
+    id: "weekly-" + Date.now(),
+    date: new Date().toISOString(),
+    summary: fields.map(item => item.label + ": " + item.value).join("\n")
+  };
+  weeklyReviews.unshift(review);
+  weeklyReviews = weeklyReviews.slice(0,12);
+  if (!write(weeklyReviewKey, weeklyReviews)) {
+    weeklyReviews.shift();
+    say("No he podido guardar la revisión en este dispositivo.");
+    return;
+  }
+  renderWeeklyReviews();
+  processCommand(
+    "Haz mi revisión integral de esta semana y prepara un plan realista para los próximos siete días. Mis datos: " +
+    review.summary +
+    " Distingue hechos de suposiciones, identifica avances, elige como máximo tres prioridades generales y concreta una acción inicial de 10 minutos. Si falta información, pregúntame antes de asumir. Respeta mi horario escolar, futsal, descanso, edad y compromisos. No añadas entrenamientos físicos extra en días de partido o entrenamiento."
+  );
+});
+renderWeeklyReviews();
 
 document.querySelectorAll("[data-coach]").forEach(button => {
   button.addEventListener("click", () => {
