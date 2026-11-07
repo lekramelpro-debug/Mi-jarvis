@@ -1,4 +1,4 @@
-/* JARVIS 1.0 — estados de voz y procesamiento, reconocimiento progresivo */
+/* JARVIS 1.2 — voz mejorada y personalidad configurable */
 "use strict";
 
 const $ = id => document.getElementById(id);
