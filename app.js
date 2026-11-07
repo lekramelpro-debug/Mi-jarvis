@@ -42,7 +42,7 @@ const settings = Object.assign(
 );
 
 function saveSettings() {
-  write(KEYS.settings, settings);
+  return write(KEYS.settings, settings);
 }
 
 function getSelectedVoice() {
@@ -728,11 +728,22 @@ $("exportMemory").addEventListener("click", () => {
   download("jarvis-memoria.json", read(KEYS.notes));
 });
 $("exportAll").addEventListener("click", () => {
+  const safeSettings = {
+    voiceReplies: !!settings.voiceReplies,
+    saveChat: !!settings.saveChat,
+    shareMemoryWithAI: !!settings.shareMemoryWithAI,
+    voiceName: String(settings.voiceName || ""),
+    voiceLang: String(settings.voiceLang || ""),
+    voiceRate: Number(settings.voiceRate) || 0.96,
+    voicePitch: Number(settings.voicePitch) || 0.98,
+    personality: String(settings.personality || "").slice(0, 20000)
+  };
   download("jarvis-copia-seguridad.json", {
-    version: 4,
+    version: 5,
     notes: read(KEYS.notes),
     tasks: read(KEYS.tasks),
     chat: read(KEYS.chat),
+    settings: safeSettings,
     exportedAt: new Date().toISOString()
   });
 });
@@ -745,14 +756,42 @@ $("importFile").addEventListener("change", async event => {
     if (!data || !Array.isArray(data.notes) || !Array.isArray(data.tasks)) {
       throw new Error("Formato no válido");
     }
-    if (!confirm("La importación sustituirá las notas y tareas actuales de este navegador. ¿Continuar?")) return;
-    write(KEYS.notes, data.notes);
-    write(KEYS.tasks, data.tasks);
-    if (Array.isArray(data.chat)) write(KEYS.chat, data.chat);
+    if (data.notes.length > 5000 || data.tasks.length > 5000 ||
+        (Array.isArray(data.chat) && data.chat.length > 5000)) {
+      throw new Error("La copia supera el tamaño admitido");
+    }
+    if (!confirm("La importación sustituirá las notas, tareas y conversación actuales. También recuperará tus preferencias y personalidad. La clave privada de sincronización no se incluye ni se modifica. ¿Continuar?")) return;
+    if (!write(KEYS.notes, data.notes) || !write(KEYS.tasks, data.tasks)) {
+      throw new Error("No hay espacio suficiente para guardar los datos");
+    }
+    if (Array.isArray(data.chat) && !write(KEYS.chat, data.chat)) {
+      throw new Error("No hay espacio suficiente para guardar la conversación");
+    }
+    if (data.settings && typeof data.settings === "object" && !Array.isArray(data.settings)) {
+      const imported = data.settings;
+      if (typeof imported.voiceReplies === "boolean") settings.voiceReplies = imported.voiceReplies;
+      if (typeof imported.saveChat === "boolean") settings.saveChat = imported.saveChat;
+      if (typeof imported.shareMemoryWithAI === "boolean") settings.shareMemoryWithAI = imported.shareMemoryWithAI;
+      if (typeof imported.voiceName === "string") settings.voiceName = imported.voiceName.slice(0, 200);
+      if (typeof imported.voiceLang === "string") settings.voiceLang = imported.voiceLang.slice(0, 30);
+      if (Number.isFinite(Number(imported.voiceRate))) settings.voiceRate = Math.min(1.25, Math.max(0.75, Number(imported.voiceRate)));
+      if (Number.isFinite(Number(imported.voicePitch))) settings.voicePitch = Math.min(1.3, Math.max(0.7, Number(imported.voicePitch)));
+      if (typeof imported.personality === "string") settings.personality = imported.personality.slice(0, 20000);
+      if (!saveSettings()) throw new Error("No se pudieron guardar las preferencias");
+      $("voiceReplies").checked = settings.voiceReplies;
+      $("saveChat").checked = settings.saveChat;
+      $("shareMemoryWithAI").checked = settings.shareMemoryWithAI;
+      $("voiceRate").value = String(settings.voiceRate);
+      $("voicePitch").value = String(settings.voicePitch);
+      $("voiceRateValue").textContent = settings.voiceRate.toFixed(2) + "×";
+      $("voicePitchValue").textContent = settings.voicePitch.toFixed(2);
+      $("personalityInput").value = settings.personality;
+      refreshVoiceList();
+    }
     $("chatLog").replaceChildren();
     restoreChat();
     renderAll();
-    say("Copia de seguridad importada correctamente.");
+    say("Copia de seguridad importada correctamente, incluidas tus preferencias. La clave de sincronización se ha conservado.");
   } catch {
     alert("No se pudo importar el archivo. Comprueba que sea una copia de JARVIS válida.");
   } finally {
@@ -921,7 +960,11 @@ if (personalityInput) personalityInput.value = String(settings.personality || ""
 $("savePersonality").addEventListener("click", () => {
   settings.personality = String(personalityInput.value || "").trim().slice(0, 20000);
   personalityInput.value = settings.personality;
-  saveSettings();
+  if (!saveSettings()) {
+    $("personalityStatus").textContent = "No se ha podido guardar. Comprueba el espacio disponible del navegador.";
+    say("No he podido guardar los cambios en este dispositivo.");
+    return;
+  }
   $("personalityStatus").textContent = settings.personality
     ? "Comportamiento guardado. JARVIS lo aplicará en las próximas respuestas de IA."
     : "No hay instrucciones personalizadas. JARVIS utilizará su comportamiento predeterminado.";
@@ -930,7 +973,10 @@ $("savePersonality").addEventListener("click", () => {
 $("resetPersonality").addEventListener("click", () => {
   personalityInput.value = "";
   settings.personality = "";
-  saveSettings();
+  if (!saveSettings()) {
+    $("personalityStatus").textContent = "No se han podido guardar los cambios. Comprueba el espacio del navegador.";
+    return;
+  }
   $("personalityStatus").textContent = "Instrucciones borradas. Se utilizará el comportamiento predeterminado.";
   say("He borrado las instrucciones personalizadas.");
 });
