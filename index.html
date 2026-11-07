@@ -35,6 +35,8 @@
   <button class="coach-action" type="button" data-coach="deporte"><b>02 · RENDIMIENTO</b><span>Planificar mi entrenamiento</span><small>Futsal, técnica, recuperación y descanso</small></button>
   <button class="coach-action" type="button" data-coach="alterego"><b>03 · DISCIPLINA</b><span>Activar mi alter ego</span><small>Una misión concreta para hoy</small></button>
   <button class="coach-action" type="button" data-coach="revision"><b>04 · CONTROL</b><span>Revisar mi progreso</span><small>Equilibrio entre negocio, deporte y hábitos</small></button>
+  <button class="coach-action" type="button" data-coach="estudios"><b>05 · ESTUDIOS</b><span>Mejorar en clase</span><small>Estudio activo, exámenes y organización</small></button>
+  <button class="coach-action" type="button" data-coach="plan"><b>06 · PLANIFICACIÓN</b><span>Organizar mi semana</span><small>Prioridades realistas y tiempo para descansar</small></button>
 </div>
   </section>
   <section class="panel">
@@ -78,6 +80,27 @@
     <div class="divider"></div>
     <div class="section-head"><h4>Últimas revisiones</h4><span class="muted" id="futsalReviewCount">0 guardadas</span></div>
     <div id="futsalReviewList" class="futsal-review-list"><p class="muted">Aún no has guardado ninguna revisión.</p></div>
+  </section>
+  <section class="panel weekly-review" aria-labelledby="weeklyReviewTitle">
+    <div class="section-head"><div><span class="eyebrow">CONTROL INTEGRAL · 5 MIN</span><h3 id="weeklyReviewTitle">Revisión de progreso semanal</h3></div><span class="tag">TODAS TUS ÁREAS</span></div>
+    <p class="muted">Registra lo que ha pasado de verdad. Puedes dejar campos vacíos si esta semana no has trabajado un área.</p>
+    <form id="weeklyReviewForm" class="futsal-review-form">
+      <label for="weeklyBusiness">Negocio y dropshipping</label>
+      <textarea id="weeklyBusiness" rows="2" maxlength="500" placeholder="Qué probé, qué aprendí, datos o dudas..."></textarea>
+      <label for="weeklyStudies">Estudios</label>
+      <textarea id="weeklyStudies" rows="2" maxlength="500" placeholder="Tareas, exámenes, qué entendí y qué se me atasca..."></textarea>
+      <label for="weeklySport">Deporte y futsal</label>
+      <textarea id="weeklySport" rows="2" maxlength="500" placeholder="Entrenamientos/partidos, sensaciones y recuperación..."></textarea>
+      <label for="weeklyHabits">Disciplina y desarrollo personal</label>
+      <textarea id="weeklyHabits" rows="2" maxlength="500" placeholder="Constancia, comunicación, inglés, lectura u otros hábitos..."></textarea>
+      <label for="weeklyWellbeing">Energía, descanso y equilibrio</label>
+      <textarea id="weeklyWellbeing" rows="2" maxlength="500" placeholder="Qué te ayudó, qué te quitó tiempo o energía..."></textarea>
+      <button class="btn primary" type="submit">Analizar mi semana y crear un plan</button>
+    </form>
+    <small class="hint">JARVIS te ayudará a elegir pocas prioridades y un plan compatible con clases, entrenamientos, descanso y vida personal.</small>
+    <div class="divider"></div>
+    <div class="section-head"><h4>Revisiones anteriores</h4><span class="muted" id="weeklyReviewCount">0 guardadas</span></div>
+    <div id="weeklyReviewList" class="futsal-review-list"><p class="muted">Todavía no hay revisiones semanales.</p></div>
   </section>
   <section class="panel"><div class="section-head"><div><span class="eyebrow">ACCESO RÁPIDO</span><h3>Herramientas</h3></div></div><div class="quick-grid"><button class="quick" data-go="tasks"><b>✓</b><span>Planificar mi día</span><small>Organiza prioridades</small></button><button class="quick" data-go="memory"><b>▤</b><span>Guardar una idea</span><small>Memoria de este dispositivo</small></button><button class="quick" data-go="research"><b>⌕</b><span>Investigar</span><small>Abrir búsqueda web</small></button><button class="quick" data-go="tools"><b>⌘</b><span>Mis herramientas</span><small>Accesos y ajustes</small></button></div></section>
 </section>
@@ -140,5 +163,5 @@
 <footer>J.A.R.V.I.S. · VERSIÓN 1.0 · Voz y chat mejorados.</footer>
 </main>
 </div>
-<script src="./app.js?v=jarvis-27" defer></script>
+<script src="./app.js?v=jarvis-28" defer></script>
 </body></html>
