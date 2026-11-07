@@ -54,3 +54,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .coach-action:hover{border-color:var(--cyan);background:#102b40}
 .coach-action:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
 @media(max-width:600px){.coach-actions{grid-template-columns:1fr 1fr}.coach-action{padding:10px}.coach-action small{font-size:9px}}
+
+
+/* Entrenamiento diario de habilidades personales */
+.skill-content{display:flex;align-items:flex-start;gap:17px;margin:12px 0}
+.skill-number{flex:0 0 62px;width:62px;height:62px;display:grid;place-items:center;border:1px solid #367b91;border-radius:15px;color:var(--cyan);font-size:17px;font-weight:700;background:#0a1928}
+.skill-copy{min-width:0;flex:1}
+.skill-copy h4{font-size:18px;margin:0 0 5px}
+.skill-copy p{margin:5px 0}
+.skill-practice{display:grid;gap:4px;padding:11px 13px;border-left:2px solid var(--cyan);background:#0a1928;border-radius:0 9px 9px 0}
+.skill-practice b{font-size:9px;letter-spacing:.14em;color:var(--cyan)}
+.skill-practice span{font-size:13px;line-height:1.5}
+#completeDailySkill:disabled{opacity:.7;cursor:default}
+@media(max-width:600px){.skill-content{gap:11px}.skill-number{flex-basis:48px;width:48px;height:48px;font-size:14px}.skill-copy h4{font-size:16px}}
