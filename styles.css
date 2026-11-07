@@ -32,3 +32,6 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .voice-tuning input[type="range"]{width:100%;accent-color:var(--cyan)}
 
 .chat-form textarea{resize:vertical;min-height:48px;max-height:240px;line-height:1.45;overflow-y:auto;}
+
+.chat-form textarea{resize:vertical;min-height:48px;max-height:240px;line-height:1.45;overflow-y:auto;}
+.chat-form textarea:focus{outline:1px solid var(--cyan);border-color:var(--cyan);}
