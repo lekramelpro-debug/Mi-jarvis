@@ -73,3 +73,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .futsal-panel{margin-top:16px}
 .futsal-meta{display:flex;flex-wrap:wrap;gap:8px 16px;margin:8px 0;color:var(--muted);font-size:11px}
 #completeFutsal:disabled{opacity:.7;cursor:default}
+
+
+/* Registro de aprendizaje de partidos y entrenamientos de futsal */
+.futsal-review{margin-top:16px}
+.futsal-review-form{display:grid;gap:8px;margin:12px 0}
+.futsal-review-form label{font-size:12px;color:var(--cyan)}
+.futsal-review-form input,.futsal-review-form select,.futsal-review-form textarea{width:100%;min-width:0;background:#071522;border:1px solid #28516a;border-radius:9px;padding:11px;color:var(--text);font:inherit;line-height:1.45}
+.futsal-review-form textarea{resize:vertical;max-height:150px}
+.futsal-review-list{display:grid;gap:9px}
+.futsal-review-entry{display:grid;gap:5px;padding:12px;background:#0a1928;border:1px solid #173b53;border-radius:10px}
+.futsal-review-entry strong{color:var(--cyan);font-size:12px}
+.futsal-review-entry p{margin:0;font-size:12px;line-height:1.5;color:var(--text)}
+.futsal-review-entry .btn{width:fit-content;margin-top:5px}
