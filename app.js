@@ -855,6 +855,20 @@ $("chatForm").addEventListener("submit", event => {
 });
 $("focusInputBtn").addEventListener("click", () => $("chatInput").focus());
 
+const coachPrompts = {
+  dropshipping: "Quiero trabajar en mi proyecto de dropshipping. Guíame como mentor: primero identifica qué información necesitas sobre el producto, cliente, competencia, precio, costes y presupuesto; después propón una prueba pequeña y realista. Separa datos, hipótesis y cálculos, y termina con una siguiente acción concreta.",
+  deporte: "Quiero planificar mi rendimiento en fútbol sala como portero. Ayúdame a organizar una sesión segura y adecuada a mi edad, teniendo en cuenta mis entrenamientos, partidos, estudios, sueño y recuperación. Prioriza técnica, movilidad, coordinación y fuerza funcional; pregúntame por molestias o cansancio antes de aumentar la carga.",
+  alterego: "Activa mi modo de disciplina: dame una misión breve para hoy que entrene constancia, autocontrol, calma y comunicación segura. Que sea concreta, medible y compatible con mis estudios, descanso y deporte. No quiero frases vacías: quiero una acción que pueda completar.",
+  revision: "Haz conmigo una revisión semanal breve y honesta de mis tres áreas: dropshipping, rendimiento deportivo y alter ego. Pregúntame qué hice, qué resultado observé, qué obstáculo apareció y qué aprendí. Después ayúdame a elegir una prioridad y un siguiente paso realista para cada área, sin sobrecargar mi horario."
+};
+document.querySelectorAll("[data-coach]").forEach(button => {
+  button.addEventListener("click", () => {
+    const prompt = coachPrompts[button.dataset.coach];
+    if (!prompt) return;
+    processCommand(prompt);
+  });
+});
+
 $("voiceBtn").addEventListener("click", () => {
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) {
