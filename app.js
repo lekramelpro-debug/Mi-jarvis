@@ -857,7 +857,7 @@ $("focusInputBtn").addEventListener("click", () => $("chatInput").focus());
 
 const coachPrompts = {
   dropshipping: "Quiero trabajar en mi proyecto de dropshipping. Guíame como mentor: primero identifica qué información necesitas sobre el producto, cliente, competencia, precio, costes y presupuesto; después propón una prueba pequeña y realista. Separa datos, hipótesis y cálculos, y termina con una siguiente acción concreta.",
-  deporte: "Quiero planificar mi rendimiento en fútbol sala como portero. Ayúdame a organizar una sesión segura y adecuada a mi edad, teniendo en cuenta mis entrenamientos, partidos, estudios, sueño y recuperación. Prioriza técnica, movilidad, coordinación y fuerza funcional; pregúntame por molestias o cansancio antes de aumentar la carga.",
+  deporte: "Actúa como mi entrenador educativo de fútbol sala, especializado en porteros. Ayúdame a mejorar colocación, ángulos, posición de base, blocaje, desvíos seguros, desplazamientos, juego con los pies, pase, comunicación con la defensa, lectura de juego y toma de decisiones. Primero pregúntame por el próximo entrenamiento o partido, carga de la semana, cansancio y molestias. Adapta todo a mi edad: prioriza técnica de calidad y sesiones breves, sin impactos ni ejercicios de riesgo sin entrenador. En días con entrenamiento o partido no añadas carga física; ofrece análisis táctico, visualización o recuperación. No inventes estadísticas ni prometas convocatorias. Dame un objetivo, un ejercicio supervisable y una forma de evaluar la ejecución.";
   alterego: "Activa mi modo de disciplina: dame una misión breve para hoy que entrene constancia, autocontrol, calma y comunicación segura. Que sea concreta, medible y compatible con mis estudios, descanso y deporte. No quiero frases vacías: quiero una acción que pueda completar.",
   revision: "Haz conmigo una revisión semanal breve y honesta de mis tres áreas: dropshipping, rendimiento deportivo y alter ego. Pregúntame qué hice, qué resultado observé, qué obstáculo apareció y qué aprendí. Después ayúdame a elegir una prioridad y un siguiente paso realista para cada área, sin sobrecargar mi horario."
 };
@@ -910,6 +910,50 @@ $("completeDailySkill").addEventListener("click", () => {
   renderDailySkillStatus();
 });
 renderDailySkillStatus();
+
+
+const futsalSkills = [
+  {name:"Colocación y ángulos",desc:"Ajustar tu posición según balón, portería, rival y posibles pases.",practice:"Con tu entrenador o compañero, desde posiciones estáticas, señala dónde te colocarías ante balón centrado y balón en banda. Explica por qué; no hace falta lanzarse.",prompt:"Entréname en colocación y reducción de ángulos para portero de fútbol sala con una situación táctica y preguntas para que yo decida."},
+  {name:"Posición de base y desplazamientos",desc:"Mantener equilibrio y llegar preparado sin cruzar los pies innecesariamente.",practice:"Sin balón y a ritmo suave, practica pequeños ajustes laterales y vuelve a una posición equilibrada. Para si notas molestias.",prompt:"Entréname en posición de base y desplazamientos de portero de futsal. Dame claves técnicas y una práctica suave, sin saltos ni impactos."},
+  {name:"Blocaje y seguridad",desc:"Elegir cuándo asegurar el balón y cuándo despejarlo a una zona segura.",practice:"Repasa con un entrenador la forma correcta de colocar manos y cuerpo para blocar. Hoy puedes analizar una parada que hayas visto.",prompt:"Enséñame criterios de blocaje y seguridad para portero de futsal. Hazme decidir ante varias trayectorias y explícame los errores comunes sin ejercicios peligrosos."},
+  {name:"Juego con los pies",desc:"Controlar, perfilarte y elegir un pase sencillo bajo presión.",practice:"Con balón y espacio libre, realiza pases suaves a un objetivo cercano con ambos pies, si estás descansado y tu entrenador lo ve adecuado.",prompt:"Entréname en juego con los pies como portero de fútbol sala: perfil corporal, primer control, pase y decisión. Haz una simulación de partido."},
+  {name:"Lectura de juego",desc:"Anticipar pase, tiro, segundo palo y movimientos del rival.",practice:"Mira una jugada de futsal y pausa antes del tiro: predice las opciones del atacante y explica qué información has usado.",prompt:"Entréname en lectura de juego para portero de futsal. Preséntame situaciones y pídeme anticipar tiro, pase o segundo palo."},
+  {name:"Uno contra uno y decisiones",desc:"Esperar, mantener equilibrio y elegir el momento adecuado con ayuda del entrenador.",practice:"Analiza una situación de uno contra uno en vídeo o con tu entrenador; explica qué señales del atacante observarías.",prompt:"Entréname en toma de decisiones en uno contra uno como portero de futsal mediante escenarios tácticos, sin simular contactos ni ejercicios arriesgados."},
+  {name:"Comunicación y liderazgo",desc:"Dar indicaciones breves, claras y útiles a la defensa.",practice:"Practica tres llamadas cortas y concretas para organizar una defensa: quién marca, dónde está el apoyo y cuándo salir.",prompt:"Entréname en comunicación de portero: llamadas claras, anticipación y liderazgo respetuoso. Haz una simulación de partido y dame feedback."}
+];
+const futsalDate = new Date().toLocaleDateString("en-CA");
+const futsalDay = Math.floor(new Date(futsalDate + "T12:00:00").getTime() / 86400000);
+const futsalIndex = ((futsalDay % futsalSkills.length) + futsalSkills.length) % futsalSkills.length;
+const todayFutsal = futsalSkills[futsalIndex];
+const futsalProgressKey = "jarvis-futsal-progress-v1";
+const futsalProgress = safeRead(futsalProgressKey, {});
+$("futsalNumber").textContent = String(futsalIndex + 1).padStart(2,"0") + " / " + String(futsalSkills.length).padStart(2,"0");
+$("futsalFocus").textContent = todayFutsal.name;
+$("futsalDescription").textContent = todayFutsal.desc;
+$("futsalPractice").textContent = todayFutsal.practice;
+function renderFutsalStatus() {
+  const completed = futsalProgress[futsalDate] === todayFutsal.name;
+  $("futsalStatus").textContent = completed
+    ? "Práctica de hoy registrada. La prioridad es la calidad, no acumular carga."
+    : "Si tienes entrenamiento, partido, molestias o cansancio, no añadas carga física: usa la práctica mental o descansa.";
+  $("completeFutsal").textContent = completed ? "Práctica completada ✓" : "He practicado hoy";
+  $("completeFutsal").disabled = completed;
+}
+$("trainFutsal").addEventListener("click", () => processCommand(
+  "Quiero entrenar como portero de fútbol sala. Mi foco de hoy es " + todayFutsal.name +
+  ". Objetivo: " + todayFutsal.desc + " Práctica sugerida: " + todayFutsal.practice +
+  " " + todayFutsal.prompt +
+  " Antes de proponer carga física, pregúntame si hoy tengo entrenamiento o partido, cómo estoy de cansancio y si tengo molestias. Si hoy ya entreno o juego, cambia a una tarea táctica o de recuperación. Adapta todo a mi edad y no propongas ejercicios de riesgo sin supervisión."
+));
+$("completeFutsal").addEventListener("click", () => {
+  futsalProgress[futsalDate] = todayFutsal.name;
+  if (!write(futsalProgressKey, futsalProgress)) {
+    $("futsalStatus").textContent = "No se ha podido guardar el progreso en este dispositivo.";
+    return;
+  }
+  renderFutsalStatus();
+});
+renderFutsalStatus();
 
 document.querySelectorAll("[data-coach]").forEach(button => {
   button.addEventListener("click", () => {
