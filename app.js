@@ -955,6 +955,62 @@ $("completeFutsal").addEventListener("click", () => {
 });
 renderFutsalStatus();
 
+
+const futsalReviewKey = "jarvis-futsal-reviews-v1";
+let futsalReviews = safeRead(futsalReviewKey, []);
+if (!Array.isArray(futsalReviews)) futsalReviews = [];
+function renderFutsalReviews() {
+  const list = $("futsalReviewList");
+  list.replaceChildren();
+  $("futsalReviewCount").textContent = futsalReviews.length + " guardadas";
+  if (!futsalReviews.length) {
+    list.append(safeText("p", "Aún no has guardado ninguna revisión.", "muted"));
+    return;
+  }
+  futsalReviews.slice(0,3).forEach(review => {
+    const card = safeText("article", "", "futsal-review-entry");
+    const heading = safeText("strong", review.type + " · " + new Date(review.date).toLocaleDateString("es-ES"));
+    const good = safeText("p", "Bien: " + review.good);
+    const improve = safeText("p", "A mejorar: " + review.improve);
+    const next = safeText("p", "Siguiente objetivo: " + review.next);
+    const analyse = safeText("button", "Analizar con JARVIS", "btn secondary");
+    analyse.type = "button";
+    analyse.addEventListener("click", () => processCommand(
+      "Ayúdame a aprender de esta revisión de fútbol sala como portero. Tipo: " + review.type +
+      ". Qué hice bien: " + review.good + ". Qué quiero mejorar: " + review.improve +
+      ". Mi siguiente objetivo: " + review.next +
+      ". Dame feedback equilibrado, identifica una posible causa sin darla por segura y propón una sola tarea técnica o táctica breve, segura y adecuada a mi edad. Pregunta por contexto si hace falta."
+    ));
+    card.append(heading,good,improve,next,analyse);
+    list.append(card);
+  });
+}
+$("futsalReviewForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const review = {
+    id: "futsal-" + Date.now(),
+    date: new Date().toISOString(),
+    type: $("futsalReviewType").value,
+    good: $("futsalReviewGood").value.trim(),
+    improve: $("futsalReviewImprove").value.trim(),
+    next: $("futsalReviewNext").value.trim()
+  };
+  if (!review.good || !review.improve || !review.next) return;
+  futsalReviews.unshift(review);
+  futsalReviews = futsalReviews.slice(0,30);
+  if (!write(futsalReviewKey, futsalReviews)) {
+    futsalReviews.shift();
+    say("No he podido guardar la revisión en este dispositivo.");
+    return;
+  }
+  $("futsalReviewGood").value = "";
+  $("futsalReviewImprove").value = "";
+  $("futsalReviewNext").value = "";
+  renderFutsalReviews();
+  say("Revisión guardada. Cuando quieras, podemos analizarla juntos.");
+});
+renderFutsalReviews();
+
 document.querySelectorAll("[data-coach]").forEach(button => {
   button.addEventListener("click", () => {
     const prompt = coachPrompts[button.dataset.coach];
