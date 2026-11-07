@@ -61,6 +61,24 @@
     <div class="hero-actions"><button class="btn primary" id="trainFutsal" type="button">Entrenar con JARVIS</button><button class="btn secondary" id="completeFutsal" type="button">He practicado hoy</button></div>
     <small class="hint" id="futsalStatus" aria-live="polite">Si tienes entrenamiento, partido, molestias o cansancio, no añadas carga física: usa la práctica mental o descansa.</small>
   </section>
+  <section class="panel futsal-review" aria-labelledby="futsalReviewTitle">
+    <div class="section-head"><div><span class="eyebrow">APRENDIZAJE DESPUÉS DE JUGAR</span><h3 id="futsalReviewTitle">Revisión de entrenamiento o partido</h3></div><span class="tag">APRENDE DE CADA SESIÓN</span></div>
+    <p class="muted">Apunta hechos concretos, no te juzgues por un resultado. Una cosa que salió bien y una que quieras trabajar ya es suficiente.</p>
+    <form id="futsalReviewForm" class="futsal-review-form">
+      <label for="futsalReviewType">Tipo de sesión</label>
+      <select id="futsalReviewType"><option value="Partido">Partido</option><option value="Entrenamiento">Entrenamiento</option></select>
+      <label for="futsalReviewGood">¿Qué hice bien?</label>
+      <textarea id="futsalReviewGood" rows="2" maxlength="500" placeholder="Ej.: comuniqué antes de un pase al segundo palo..." required></textarea>
+      <label for="futsalReviewImprove">¿Qué quiero mejorar?</label>
+      <textarea id="futsalReviewImprove" rows="2" maxlength="500" placeholder="Ej.: ajustar antes mi posición cuando el balón va a banda..." required></textarea>
+      <label for="futsalReviewNext">Mi siguiente objetivo</label>
+      <input id="futsalReviewNext" maxlength="180" placeholder="Ej.: mirar antes de decidir el pase" required>
+      <button class="btn primary" type="submit">Guardar revisión</button>
+    </form>
+    <div class="divider"></div>
+    <div class="section-head"><h4>Últimas revisiones</h4><span class="muted" id="futsalReviewCount">0 guardadas</span></div>
+    <div id="futsalReviewList" class="futsal-review-list"><p class="muted">Aún no has guardado ninguna revisión.</p></div>
+  </section>
   <section class="panel"><div class="section-head"><div><span class="eyebrow">ACCESO RÁPIDO</span><h3>Herramientas</h3></div></div><div class="quick-grid"><button class="quick" data-go="tasks"><b>✓</b><span>Planificar mi día</span><small>Organiza prioridades</small></button><button class="quick" data-go="memory"><b>▤</b><span>Guardar una idea</span><small>Memoria de este dispositivo</small></button><button class="quick" data-go="research"><b>⌕</b><span>Investigar</span><small>Abrir búsqueda web</small></button><button class="quick" data-go="tools"><b>⌘</b><span>Mis herramientas</span><small>Accesos y ajustes</small></button></div></section>
 </section>
 <section class="view" id="view-memory"><section class="panel"><span class="eyebrow">BASE DE CONOCIMIENTO LOCAL</span><h2>Memoria de JARVIS</h2><p class="muted">Guarda ideas y datos que quieras consultar después. Se almacenan en este navegador y no se sincronizan con otros dispositivos. Puedes permitir que la IA use estas notas desde Herramientas.</p><form id="memoryForm" class="stack-form"><label for="memoryInput">Nueva nota</label><textarea id="memoryInput" maxlength="1000" rows="3" placeholder="Escribe una idea, preferencia o información útil..."></textarea><button class="btn primary" type="submit">Guardar en memoria</button></form><div class="section-head"><h3>Notas guardadas</h3><button class="btn secondary small" id="exportMemory">Exportar notas</button></div><div id="memoryList" class="item-list"></div></section></section>
@@ -122,5 +140,5 @@
 <footer>J.A.R.V.I.S. · VERSIÓN 1.0 · Voz y chat mejorados.</footer>
 </main>
 </div>
-<script src="./app.js?v=jarvis-25" defer></script>
+<script src="./app.js?v=jarvis-26" defer></script>
 </body></html>
