@@ -550,11 +550,14 @@ async function askJarvis(text) {
     memory.push("Fecha y hora local del usuario: " + new Date().toLocaleString("es-ES"));
   }
 
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 60000);
   try {
     const response = await fetch(AI_ENDPOINT, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: history, memory, personality: String(settings.personality || "").slice(0, 20000) })
+      body: JSON.stringify({ messages: history, memory, personality: String(settings.personality || "").slice(0, 20000) }),
+      signal: controller.signal
     });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "No se pudo obtener respuesta.");
@@ -563,8 +566,13 @@ async function askJarvis(text) {
     }
     return data.reply.trim();
   } catch (error) {
+    if (error?.name === "AbortError") {
+      return "La respuesta está tardando demasiado y he detenido la espera. Comprueba la conexión e inténtalo de nuevo con un mensaje más corto si vuelve a ocurrir.";
+    }
     return error.message ||
       "No he podido conectar con mi inteligencia artificial. Comprueba la conexión e inténtalo de nuevo.";
+  } finally {
+    window.clearTimeout(timeoutId);
   }
 }
 
@@ -904,7 +912,7 @@ $("chatForm").addEventListener("submit", event => {
 $("focusInputBtn").addEventListener("click", () => $("chatInput").focus());
 
 const coachPrompts = {
-  dropshipping: "Quiero trabajar en mi proyecto de dropshipping. Guíame como mentor: primero identifica qué información necesitas sobre el producto, cliente, competencia, precio, costes y presupuesto; después propón una prueba pequeña y realista. Separa datos, hipótesis y cálculos, y termina con una siguiente acción concreta.",
+  dropshipping: "Quiero trabajar en mi proyecto de dropshipping. Mi proyecto actual se llama ViajeTranquilo y está centrado en una almohada/reposacabezas de confort para viajes en coche de niños; trabajo con dos amigos. Si este producto sigue siendo el actual, parte de ese contexto, pero pregúntame por el estado real antes de asumir que algo está terminado. La comunicación debe hablar solo de comodidad en viajes largos: nunca afirmes que el producto protege, evita lesiones, mejora la seguridad o sustituye las instrucciones de la silla infantil. Antes de recomendar vender o publicar una afirmación, ayúdame a comprobar con el proveedor la edad adecuada, medidas, materiales, limpieza, compatibilidad e instrucciones del fabricante de la silla. Prioriza contenido orgánico y pruebas pequeñas; no recomiendes comprar stock ni gastar en anuncios antes de verificar la información del producto y revisar cualquier pago, cuenta o compromiso con mis padres/tutor. Ayúdame a probar distintos ganchos y montajes y a comparar retención, visualizaciones completas, visitas al perfil y clics, sin inventar métricas. Ten en cuenta que somos tres: propón reparto claro de tareas y una siguiente acción concreta de bajo coste. Separa datos, hipótesis y cálculos.",
   deporte: "Actúa como mi entrenador educativo de fútbol sala, especializado en porteros. Ayúdame a mejorar colocación, ángulos, posición de base, blocaje, desvíos seguros, desplazamientos, juego con los pies, pase, comunicación con la defensa, lectura de juego y toma de decisiones. Primero pregúntame por el próximo entrenamiento o partido, carga de la semana, cansancio y molestias. Adapta todo a mi edad: prioriza técnica de calidad y sesiones breves, sin impactos ni ejercicios de riesgo sin entrenador. En días con entrenamiento o partido no añadas carga física; ofrece análisis táctico, visualización o recuperación. No inventes estadísticas ni prometas convocatorias. Dame un objetivo, un ejercicio supervisable y una forma de evaluar la ejecución.",
   alterego: "Activa mi modo de disciplina: dame una misión breve para hoy que entrene constancia, autocontrol, calma y comunicación segura. Que sea concreta, medible y compatible con mis estudios, descanso y deporte. No quiero frases vacías: quiero una acción que pueda completar.",
   revision: "Haz conmigo una revisión semanal breve y honesta de todas mis áreas: dropshipping, estudios, futsal y rendimiento deportivo, disciplina, habilidades personales, inglés/lectura, descanso y equilibrio. Pregunta por hechos y resultados observados, distingue datos de suposiciones y ayúdame a elegir un máximo de tres prioridades para la semana. Respeta mi horario escolar, entrenamientos, partidos, familia y sueño; no llenes todos los huecos.",
