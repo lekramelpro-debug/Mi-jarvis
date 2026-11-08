@@ -136,13 +136,17 @@ export default {
     }
 
     const length = Number(request.headers.get("Content-Length") || 0);
-    if (length > 250000) {
+    if (length > 450000) {
       return json({ error: "Solicitud demasiado larga." }, 413, origin);
     }
 
     let body;
     try {
-      body = await request.json();
+      const rawBody = await request.text();
+      if (rawBody.length > 450000) {
+        return json({ error: "La solicitud supera el límite de tamaño permitido." }, 413, origin);
+      }
+      body = JSON.parse(rawBody);
     } catch {
       return json({ error: "Solicitud no válida." }, 400, origin);
     }
@@ -185,14 +189,19 @@ export default {
     }
 
     const messages = [{ role: "system", content: system }];
+    let totalMessageChars = 0;
     for (const item of body.messages) {
       if (!item || !["user", "model", "assistant"].includes(item.role) || typeof item.text !== "string") continue;
-      const text = item.text.trim().slice(0, 20000);
+      const text = item.text.trim();
       if (!text) continue;
-      messages.push({
-        role: item.role === "user" ? "user" : "assistant",
-        content: text
-      });
+      if (text.length > 80000) {
+        return json({ error: "El mensaje supera el límite técnico de 80.000 caracteres. Puedes enviarlo por partes, pero no necesitas resumirlo." }, 413, origin);
+      }
+      totalMessageChars += text.length;
+      if (totalMessageChars > 120000) {
+        return json({ error: "El contexto total supera el límite técnico de esta sesión. Prueba a iniciar una conversación nueva para enviar el texto completo." }, 413, origin);
+      }
+      messages.push({ role: item.role === "user" ? "user" : "assistant", content: text });
     }
 
     if (messages.length < 2 || messages[messages.length - 1].role !== "user") {
@@ -200,7 +209,7 @@ export default {
     }
 
     try {
-      const result = await env.AI.run(MODEL, { messages });
+      const result = await env.AI.run(MODEL, { messages, max_tokens: 2048, temperature: 0.65 });
       const reply = result?.choices?.[0]?.message?.content;
       if (typeof reply !== "string" || !reply.trim()) {
         return json({
@@ -208,9 +217,11 @@ export default {
         }, 502, origin);
       }
       return json({ reply: reply.trim() }, 200, origin);
-    } catch {
+    } catch (error) {
+      const detail = String(error?.message || error || "Error desconocido").slice(0, 240);
       return json({
-        error: "Workers AI no ha podido responder. Comprueba que el binding AI está activo y vuelve a intentarlo."
+        error: "Workers AI no ha podido responder. Comprueba que el binding AI está activo y vuelve a intentarlo.",
+        detail
       }, 502, origin);
     }
   }
