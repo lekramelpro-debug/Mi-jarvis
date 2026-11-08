@@ -739,11 +739,15 @@ $("exportAll").addEventListener("click", () => {
     personality: String(settings.personality || "").slice(0, 20000)
   };
   download("jarvis-copia-seguridad.json", {
-    version: 5,
+    version: 6,
     notes: read(KEYS.notes),
     tasks: read(KEYS.tasks),
     chat: read(KEYS.chat),
     settings: safeSettings,
+    dailySkillProgress: skillProgress,
+    futsalProgress,
+    futsalReviews,
+    weeklyReviews,
     exportedAt: new Date().toISOString()
   });
 });
@@ -760,7 +764,31 @@ $("importFile").addEventListener("change", async event => {
         (Array.isArray(data.chat) && data.chat.length > 5000)) {
       throw new Error("La copia supera el tamaño admitido");
     }
-    if (!confirm("La importación sustituirá las notas, tareas y conversación actuales. También recuperará tus preferencias y personalidad. La clave privada de sincronización no se incluye ni se modifica. ¿Continuar?")) return;
+    const validProgress = value => value === undefined ||
+      (value && typeof value === "object" && !Array.isArray(value) &&
+       Object.keys(value).length <= 1000 &&
+       Object.entries(value).every(([date,name]) =>
+         /^\\d{4}-\\d{2}-\\d{2}$/.test(date) &&
+         typeof name === "string" && name.length <= 120));
+    if (!validProgress(data.dailySkillProgress) || !validProgress(data.futsalProgress)) {
+      throw new Error("El progreso guardado no tiene un formato válido");
+    }
+    const validFutsalReviews = value => value === undefined ||
+      (Array.isArray(value) && value.length <= 30 &&
+       value.every(item => item && typeof item === "object" &&
+         typeof item.date === "string" && typeof item.type === "string" &&
+         typeof item.good === "string" && typeof item.improve === "string" &&
+         typeof item.next === "string" &&
+         item.good.length <= 500 && item.improve.length <= 500 && item.next.length <= 180));
+    const validWeeklyReviews = value => value === undefined ||
+      (Array.isArray(value) && value.length <= 12 &&
+       value.every(item => item && typeof item === "object" &&
+         typeof item.date === "string" && typeof item.summary === "string" &&
+         item.summary.length <= 3000));
+    if (!validFutsalReviews(data.futsalReviews) || !validWeeklyReviews(data.weeklyReviews)) {
+      throw new Error("El historial de progreso no tiene un formato válido");
+    }
+    if (!confirm("La importación sustituirá tus notas, tareas y conversación, y recuperará las preferencias y los historiales de progreso incluidos en la copia. La clave privada de sincronización no se incluye ni se modifica. ¿Continuar?")) return;
     if (!write(KEYS.notes, data.notes) || !write(KEYS.tasks, data.tasks)) {
       throw new Error("No hay espacio suficiente para guardar los datos");
     }
@@ -788,10 +816,30 @@ $("importFile").addEventListener("change", async event => {
       $("personalityInput").value = settings.personality;
       refreshVoiceList();
     }
+    const replaceProgress = (key, target, imported) => {
+      if (imported === undefined) return;
+      if (!write(key, imported)) throw new Error("No se pudo guardar el historial de progreso");
+      Object.keys(target).forEach(date => delete target[date]);
+      Object.assign(target, imported);
+    };
+    replaceProgress(skillProgressKey, skillProgress, data.dailySkillProgress);
+    replaceProgress(futsalProgressKey, futsalProgress, data.futsalProgress);
+    if (data.futsalReviews !== undefined) {
+      if (!write(futsalReviewKey, data.futsalReviews)) throw new Error("No se pudo guardar el historial de futsal");
+      futsalReviews = data.futsalReviews;
+      renderFutsalReviews();
+    }
+    if (data.weeklyReviews !== undefined) {
+      if (!write(weeklyReviewKey, data.weeklyReviews)) throw new Error("No se pudo guardar el historial semanal");
+      weeklyReviews = data.weeklyReviews;
+      renderWeeklyReviews();
+    }
+    renderDailySkillStatus();
+    renderFutsalStatus();
     $("chatLog").replaceChildren();
     restoreChat();
     renderAll();
-    say("Copia de seguridad importada correctamente, incluidas tus preferencias. La clave de sincronización se ha conservado.");
+    say("Copia de seguridad importada correctamente, incluidas tus preferencias y el progreso guardado. La clave de sincronización se ha conservado.");
   } catch {
     alert("No se pudo importar el archivo. Comprueba que sea una copia de JARVIS válida.");
   } finally {
