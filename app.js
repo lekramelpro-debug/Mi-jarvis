@@ -82,15 +82,22 @@ function speak(text, force = false) {
   });
   if (current) chunks.push(current);
 
-  chunks.forEach((chunk, index) => {
-    const utterance = new SpeechSynthesisUtterance(chunk);
+  let index = 0;
+  const speakNext = () => {
+    if (index >= chunks.length) return;
+    const utterance = new SpeechSynthesisUtterance(chunks[index++]);
     utterance.lang = voice?.lang || "es-ES";
     if (voice) utterance.voice = voice;
     utterance.rate = rate;
     utterance.pitch = pitch;
     utterance.volume = 1;
+    utterance.onend = speakNext;
+    utterance.onerror = event => {
+      if (event.error !== "canceled" && event.error !== "interrupted") $("systemState").textContent = "ERROR DE AUDIO";
+    };
     window.speechSynthesis.speak(utterance);
-  });
+  };
+  speakNext();
 }
 
 function refreshVoiceList() {
@@ -460,6 +467,8 @@ function stableSyncRecords(items, kind) {
 }
 
 let syncInProgress = false;
+let syncPending = false;
+let syncPendingForcePush = false;
 
 async function syncRequest(action, data) {
   const response = await fetch(AI_ENDPOINT, {
@@ -481,7 +490,11 @@ async function syncNow(silent = false, forcePush = true) {
     if (!silent) say("Primero introduce y guarda tu clave de sincronización.");
     return false;
   }
-  if (syncInProgress) return false;
+  if (syncInProgress) {
+    syncPending = true;
+    syncPendingForcePush = syncPendingForcePush || forcePush;
+    return false;
+  }
   syncInProgress = true;
   const button = $("syncNow");
   const status = $("syncStatus");
@@ -515,6 +528,12 @@ async function syncNow(silent = false, forcePush = true) {
   } finally {
     syncInProgress = false;
     if (button) button.disabled = false;
+    if (syncPending) {
+      const pushPendingChanges = syncPendingForcePush;
+      syncPending = false;
+      syncPendingForcePush = false;
+      window.setTimeout(() => syncNow(true, pushPendingChanges), 0);
+    }
   }
 }
 
@@ -747,7 +766,8 @@ $("exportAll").addEventListener("click", () => {
     personality: String(settings.personality || "").slice(0, 20000)
   };
   download("jarvis-copia-seguridad.json", {
-    version: 6,
+    version: 7,
+    businessTests: read(businessTestsKey),
     notes: read(KEYS.notes),
     tasks: read(KEYS.tasks),
     chat: read(KEYS.chat),
@@ -769,7 +789,8 @@ $("importFile").addEventListener("change", async event => {
       throw new Error("Formato no válido");
     }
     if (data.notes.length > 5000 || data.tasks.length > 5000 ||
-        (Array.isArray(data.chat) && data.chat.length > 5000)) {
+        (Array.isArray(data.chat) && data.chat.length > 5000) ||
+        (Array.isArray(data.businessTests) && data.businessTests.length > 100)) {
       throw new Error("La copia supera el tamaño admitido");
     }
     const validProgress = value => value === undefined ||
@@ -793,7 +814,15 @@ $("importFile").addEventListener("change", async event => {
        value.every(item => item && typeof item === "object" &&
          typeof item.date === "string" && typeof item.summary === "string" &&
          item.summary.length <= 3000));
-    if (!validFutsalReviews(data.futsalReviews) || !validWeeklyReviews(data.weeklyReviews)) {
+    const validBusinessTests = value => value === undefined ||
+      (Array.isArray(value) && value.length <= 100 &&
+       value.every(item => item && typeof item === "object" &&
+        typeof item.date === "string" && typeof item.name === "string" &&
+        typeof item.hypothesis === "string" && typeof item.result === "string" &&
+        typeof item.next === "string" && item.name.length <= 140 &&
+        item.hypothesis.length <= 400 && item.result.length <= 500 && item.next.length <= 180));
+    if (!validFutsalReviews(data.futsalReviews) || !validWeeklyReviews(data.weeklyReviews) ||
+        !validBusinessTests(data.businessTests)) {
       throw new Error("El historial de progreso no tiene un formato válido");
     }
     if (!confirm("La importación sustituirá tus notas, tareas y conversación, y recuperará las preferencias y los historiales de progreso incluidos en la copia. La clave privada de sincronización no se incluye ni se modifica. ¿Continuar?")) return;
@@ -841,6 +870,11 @@ $("importFile").addEventListener("change", async event => {
       if (!write(weeklyReviewKey, data.weeklyReviews)) throw new Error("No se pudo guardar el historial semanal");
       weeklyReviews = data.weeklyReviews;
       renderWeeklyReviews();
+    }
+    if (data.businessTests !== undefined) {
+      if (!write(businessTestsKey, data.businessTests)) throw new Error("No se pudo guardar el historial de negocio");
+      businessTests = data.businessTests;
+      renderBusinessTests();
     }
     renderDailySkillStatus();
     renderFutsalStatus();
@@ -1129,6 +1163,40 @@ $("weeklyReviewForm").addEventListener("submit", event => {
 });
 renderWeeklyReviews();
 
+const businessTestsKey = "jarvis-business-tests-v1";
+let businessTests = safeRead(businessTestsKey, []);
+if (!Array.isArray(businessTests)) businessTests = [];
+function renderBusinessTests() {
+  const list = $("businessTestList");
+  list.replaceChildren();
+  $("businessTestCount").textContent = businessTests.length + " guardados";
+  if (!businessTests.length) { list.append(safeText("p", "Aún no has registrado experimentos.", "muted")); return; }
+  businessTests.slice(0,4).forEach(test => {
+    const card = safeText("article", "", "futsal-review-entry");
+    card.append(safeText("strong", test.name + " · " + new Date(test.date).toLocaleDateString("es-ES")),
+      safeText("p", "Hipótesis: " + test.hypothesis), safeText("p", "Resultado: " + test.result),
+      safeText("p", "Siguiente paso: " + test.next));
+    const analyse = safeText("button", "Analizar con JARVIS", "btn secondary");
+    analyse.type = "button";
+    analyse.addEventListener("click", () => processCommand(
+      "Analiza este experimento de dropshipping. Prueba: " + test.name + ". Hipótesis: " + test.hypothesis +
+      ". Resultado observado: " + test.result + ". Siguiente paso: " + test.next +
+      ". Separa datos de hipótesis, no inventes métricas ni afirmes causalidad con una sola prueba. Sugiere una mejora orgánica pequeña y de bajo coste. Cualquier pago o compromiso comercial debe revisarse con mis padres o tutor."
+    ));
+    card.append(analyse); list.append(card);
+  });
+}
+$("businessTestForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const test = {id:"business-"+Date.now(),date:new Date().toISOString(),name:$("businessTestName").value.trim(),
+    hypothesis:$("businessTestHypothesis").value.trim(),result:$("businessTestResult").value.trim(),next:$("businessTestNext").value.trim()};
+  if (!test.name || !test.hypothesis || !test.result || !test.next) return;
+  businessTests.unshift(test); businessTests=businessTests.slice(0,100);
+  if (!write(businessTestsKey,businessTests)) {businessTests.shift();say("No he podido guardar el experimento. Comprueba el espacio disponible.");return;}
+  $("businessTestForm").reset();renderBusinessTests();say("Experimento guardado. Ya puedes compararlo con tus siguientes pruebas.");
+});
+renderBusinessTests();
+
 document.querySelectorAll("[data-coach]").forEach(button => {
   button.addEventListener("click", () => {
     const prompt = coachPrompts[button.dataset.coach];
@@ -1137,7 +1205,13 @@ document.querySelectorAll("[data-coach]").forEach(button => {
   });
 });
 
+let activeRecognition = null;
 $("voiceBtn").addEventListener("click", () => {
+  if (activeRecognition) {
+    try { activeRecognition.stop(); } catch {}
+    $("voiceBtn").textContent = "Cerrando micrófono…";
+    return;
+  }
   const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!Recognition) {
     say("El reconocimiento de voz no está disponible en este navegador. Puedes escribir en el chat.");
@@ -1145,6 +1219,7 @@ $("voiceBtn").addEventListener("click", () => {
   }
 
   const recognition = new Recognition();
+  activeRecognition = recognition;
   recognition.lang = "es-ES";
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
@@ -1153,8 +1228,8 @@ $("voiceBtn").addEventListener("click", () => {
 
   recognition.onstart = () => {
     $("systemState").textContent = "ESCUCHANDO";
-    $("voiceBtn").textContent = "🎙 Escuchando…";
-    $("voiceBtn").disabled = true;
+    $("voiceBtn").textContent = "■ Detener escucha";
+    $("voiceBtn").disabled = false;
   };
 
   recognition.onresult = event => {
@@ -1186,6 +1261,7 @@ $("voiceBtn").addEventListener("click", () => {
   };
 
   recognition.onend = () => {
+    if (activeRecognition === recognition) activeRecognition = null;
     $("voiceBtn").disabled = false;
     $("voiceBtn").textContent = "🎙 Hablar con JARVIS";
     const completeTranscript = finalTranscript.trim();
@@ -1202,6 +1278,7 @@ $("voiceBtn").addEventListener("click", () => {
   try {
     recognition.start();
   } catch {
+    if (activeRecognition === recognition) activeRecognition = null;
     $("voiceBtn").disabled = false;
     $("voiceBtn").textContent = "🎙 Hablar con JARVIS";
     $("systemState").textContent = "ASISTENTE CONECTADO";
