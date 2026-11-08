@@ -50,6 +50,19 @@
     <div id="homeTasks" class="compact-list"><p class="muted">Todavía no tienes tareas.</p></div>
   </section>
   </div>
+  <section class="panel business-panel" aria-labelledby="businessTestTitle">
+    <div class="section-head"><div><span class="eyebrow">LABORATORIO DE NEGOCIO</span><h3 id="businessTestTitle">Experimentos de dropshipping</h3></div><span class="tag">DATOS REALES</span></div>
+    <p class="muted">Registra hipótesis, pruebas de contenido y resultados. Empieza con pruebas orgánicas y sin gastar. Se guarda en este dispositivo y se incluye en la copia de seguridad.</p>
+    <form id="businessTestForm" class="futsal-review-form">
+      <label for="businessTestName">Qué he probado</label><input id="businessTestName" maxlength="140" placeholder="Ej.: vídeo mostrando comodidad en viajes" required>
+      <label for="businessTestHypothesis">Hipótesis o gancho</label><textarea id="businessTestHypothesis" rows="2" maxlength="400" placeholder="Qué creo que puede funcionar y por qué..." required></textarea>
+      <label for="businessTestResult">Resultado observado (sin inventar cifras)</label><textarea id="businessTestResult" rows="2" maxlength="500" placeholder="Visualizaciones, retención, comentarios, clics o aprendizaje..." required></textarea>
+      <label for="businessTestNext">Siguiente paso</label><input id="businessTestNext" maxlength="180" placeholder="Qué cambiaré o comprobaré después..." required>
+      <button class="btn primary" type="submit">Guardar experimento</button>
+    </form>
+    <div class="divider"></div><div class="section-head"><h4>Últimos experimentos</h4><span class="muted" id="businessTestCount">0 guardados</span></div>
+    <div id="businessTestList" class="futsal-review-list"><p class="muted">Aún no has registrado experimentos.</p></div>
+  </section>
   <section class="panel skill-panel" aria-labelledby="dailySkillTitle">
     <div class="section-head"><div><span class="eyebrow">ENTRENAMIENTO MENTAL · 5–10 MIN</span><h3 id="dailySkillTitle">Habilidad del día</h3></div><span class="tag">UNA MEJORA CADA DÍA</span></div>
     <div class="skill-content"><div class="skill-number" id="dailySkillNumber">01</div><div class="skill-copy"><h4 id="dailySkillName">Comunicación clara</h4><p id="dailySkillDescription" class="muted">Aprende a expresar tus ideas con calma y precisión.</p><p class="skill-practice"><b>RETO DE HOY</b><span id="dailySkillPractice">Explica una idea en 30 segundos, empezando por lo más importante.</span></p></div></div>
@@ -163,5 +176,5 @@
 <footer>J.A.R.V.I.S. · VERSIÓN 1.0 · Voz y chat mejorados.</footer>
 </main>
 </div>
-<script src="./app.js?v=jarvis-31" defer></script>
+<script src="./app.js?v=jarvis-32" defer></script>
 </body></html>
