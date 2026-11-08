@@ -10,7 +10,7 @@ Aplicación web personal en español para móvil y ordenador.
 - Sincronización automática opcional de notas y tareas entre dispositivos mediante Cloudflare D1, con actualización al volver a la web y comprobación periódica mientras permanece abierta.
 - Recordatorios del navegador mientras JARVIS permanece abierto.
 - Uso opcional de notas y tareas como contexto para la IA, desactivado por defecto.
-- Importación y exportación de copias de seguridad JSON.
+- Importación y exportación de copias de seguridad JSON, incluidas las revisiones semanales, las revisiones de futsal y el progreso diario de habilidades; la clave de sincronización nunca se exporta.
 
 ## Configuración del Worker
 
