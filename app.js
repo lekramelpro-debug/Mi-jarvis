@@ -1171,11 +1171,18 @@ $("voiceBtn").addEventListener("click", () => {
   };
 
   recognition.onerror = event => {
-    if (event.error !== "no-speech" && event.error !== "aborted") {
-      say("No he podido reconocer la voz. Comprueba los permisos del micrófono e inténtalo otra vez.");
-    } else if (event.error === "no-speech") {
-      say("No he detectado voz. Pulsa el micrófono y vuelve a hablar.");
-    }
+    const messages = {
+      "not-allowed": "El navegador ha bloqueado el micrófono. Revisa los permisos de esta página y permite el acceso al micrófono.",
+      "service-not-allowed": "El servicio de reconocimiento de voz no está permitido en este navegador. Prueba con Chrome actualizado.",
+      "audio-capture": "No se ha podido acceder al micrófono. Comprueba que funciona y que ninguna otra aplicación lo está utilizando.",
+      "network": "El reconocimiento de voz ha fallado por un problema de conexión o del servicio. Comprueba Internet e inténtalo de nuevo.",
+      "no-speech": "No he detectado voz. Pulsa el micrófono y vuelve a hablar.",
+      "aborted": "El reconocimiento de voz se ha detenido."
+    };
+    const message = messages[event.error] ||
+      "Ha ocurrido un error de reconocimiento de voz (" + String(event.error || "desconocido") + "). Inténtalo de nuevo.";
+    $("systemState").textContent = event.error === "aborted" ? "ASISTENTE CONECTADO" : "ERROR DE VOZ";
+    if (event.error !== "aborted") say(message);
   };
 
   recognition.onend = () => {
