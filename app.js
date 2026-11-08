@@ -539,10 +539,10 @@ async function syncNow(silent = false, forcePush = true) {
 
 
 async function askJarvis(text) {
-  const saved = read(KEYS.chat).slice(-8);
+  const saved = read(KEYS.chat).slice(-6);
   const history = saved.map((message, index) => ({
     role: message.who === "assistant" ? "model" : "user",
-    text: String(message.text || "").slice(index === saved.length - 1 && message.who !== "assistant" ? 0 : -1800)
+    text: String(message.text || "").slice(index === saved.length - 1 && message.who !== "assistant" ? 0 : -1400)
   }));
 
   if (
@@ -569,30 +569,47 @@ async function askJarvis(text) {
     memory.push("Fecha y hora local del usuario: " + new Date().toLocaleString("es-ES"));
   }
 
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 60000);
-  try {
-    const response = await fetch(AI_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: history, memory, personality: String(settings.personality || "").slice(0, 20000) }),
-      signal: controller.signal
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(data.error || "No se pudo obtener respuesta.");
-    if (typeof data.reply !== "string" || !data.reply.trim()) {
-      throw new Error("La IA no ha devuelto una respuesta.");
+  const requestBody = JSON.stringify({
+    messages: history,
+    memory,
+    personality: String(settings.personality || "").slice(0, 20000)
+  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 60000);
+    try {
+      const response = await fetch(AI_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: requestBody,
+        signal: controller.signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const detail = typeof data.detail === "string" ? " (" + data.detail + ")" : "";
+        return (data.error || "No se pudo obtener respuesta.") + detail;
+      }
+      if (typeof data.reply !== "string" || !data.reply.trim()) return "La IA no ha devuelto una respuesta. Inténtalo otra vez.";
+      return data.reply.trim();
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return "JARVIS ha superado el tiempo máximo de espera de 60 segundos. No hace falta que resumas el mensaje: prueba de nuevo cuando el servicio esté estable.";
+      }
+      const networkFailure = error instanceof TypeError || /failed to fetch|networkerror|fetch failed/i.test(String(error?.message || ""));
+      if (networkFailure && attempt === 0) {
+        $("systemState").textContent = "RECUPERANDO CONEXIÓN…";
+        await new Promise(resolve => window.setTimeout(resolve, 700));
+        continue;
+      }
+      if (networkFailure) return navigator.onLine === false
+        ? "No hay conexión a Internet. Comprueba el Wi-Fi o los datos móviles y vuelve a intentarlo."
+        : "No he podido conectar con el servidor de JARVIS (fallo de red o de acceso). He intentado reconectar automáticamente. Comprueba la conexión y vuelve a intentarlo.";
+      return "Error al consultar la IA: " + String(error?.message || "error desconocido").slice(0, 240);
+    } finally {
+      window.clearTimeout(timeoutId);
     }
-    return data.reply.trim();
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      return "La respuesta está tardando demasiado y he detenido la espera. Comprueba la conexión e inténtalo de nuevo con un mensaje más corto si vuelve a ocurrir.";
-    }
-    return error.message ||
-      "No he podido conectar con mi inteligencia artificial. Comprueba la conexión e inténtalo de nuevo.";
-  } finally {
-    window.clearTimeout(timeoutId);
   }
+  return "No he podido conectar con JARVIS. Inténtalo de nuevo.";
 }
 
 function describePendingTasks() {
