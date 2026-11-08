@@ -10,7 +10,7 @@
 <div class="shell">
 <aside class="sidebar">
   <div class="brand"><span class="brand-mark">J</span><div><strong>J.A.R.V.I.S.</strong><small>SISTEMA PERSONAL</small></div></div>
-  <div class="system-state"><i></i><span id="systemState">ASISTENTE CONECTADO</span></div>
+  <div class="system-state"><i></i><span id="systemState" role="status" aria-live="polite" aria-atomic="true">ASISTENTE CONECTADO</span></div>
   <nav aria-label="Navegación principal">
     <button class="nav active" data-view="home">⌂ <span>Inicio</span></button>
     <button class="nav" data-view="memory">▤ <span>Memoria</span></button>
@@ -29,7 +29,7 @@
     <div class="reactor" aria-label="Núcleo visual JARVIS"><div class="reactor-core">J</div></div>
   </div>
   <div class="grid two">
-    <section class="panel chat-panel"><div class="section-head"><div><span class="eyebrow">INTERFAZ CONVERSACIONAL</span><h3>JARVIS</h3></div><span class="tag">IA CONECTADA</span></div><div id="chatLog" class="chat-log" aria-live="polite"><div class="message assistant"><b>JARVIS</b><p>Sistemas inicializados. Estoy conectado y preparado para ayudarte con ideas, memoria y tareas.</p></div></div><form id="chatForm" class="chat-form"><textarea id="chatInput" maxlength="20000" rows="2" placeholder="Escribe un mensaje largo o una instrucción..." autocomplete="off"></textarea><button class="btn primary" aria-label="Enviar">➤</button></form><div class="hint">Prueba: «recuérdame estudiar mañana a las 18:00», «recuerda que…» o «¿qué tareas tengo?».</div>
+    <section class="panel chat-panel"><div class="section-head"><div><span class="eyebrow">INTERFAZ CONVERSACIONAL</span><h3>JARVIS</h3></div><span class="tag">IA CONECTADA</span></div><div id="chatLog" class="chat-log" aria-live="polite"><div class="message assistant"><b>JARVIS</b><p>Sistemas inicializados. Estoy conectado y preparado para ayudarte con ideas, memoria y tareas.</p></div></div><form id="chatForm" class="chat-form"><textarea id="chatInput" aria-label="Mensaje para JARVIS" maxlength="20000" rows="2" placeholder="Escribe un mensaje largo o una instrucción..." autocomplete="off"></textarea><button class="btn primary" aria-label="Enviar">➤</button></form><div class="hint">Prueba: «recuérdame estudiar mañana a las 18:00», «recuerda que…» o «¿qué tareas tengo?».</div>
 <div class="coach-actions" aria-label="Accesos de desarrollo personal">
   <button class="coach-action" type="button" data-coach="dropshipping"><b>01 · NEGOCIO</b><span>Analizar mi dropshipping</span><small>Producto, oferta, márgenes y siguiente prueba</small></button>
   <button class="coach-action" type="button" data-coach="deporte"><b>02 · RENDIMIENTO</b><span>Planificar mi entrenamiento</span><small>Futsal, técnica, recuperación y descanso</small></button>
@@ -163,5 +163,5 @@
 <footer>J.A.R.V.I.S. · VERSIÓN 1.0 · Voz y chat mejorados.</footer>
 </main>
 </div>
-<script src="./app.js?v=jarvis-29" defer></script>
+<script src="./app.js?v=jarvis-30" defer></script>
 </body></html>
