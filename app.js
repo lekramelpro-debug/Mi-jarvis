@@ -768,7 +768,7 @@ $("importFile").addEventListener("change", async event => {
       (value && typeof value === "object" && !Array.isArray(value) &&
        Object.keys(value).length <= 1000 &&
        Object.entries(value).every(([date,name]) =>
-         /^\\d{4}-\\d{2}-\\d{2}$/.test(date) &&
+         /^\d{4}-\d{2}-\d{2}$/.test(date) &&
          typeof name === "string" && name.length <= 120));
     if (!validProgress(data.dailySkillProgress) || !validProgress(data.futsalProgress)) {
       throw new Error("El progreso guardado no tiene un formato válido");
