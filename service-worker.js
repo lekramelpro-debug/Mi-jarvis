@@ -1,5 +1,5 @@
-const CACHE_NAME = "jarvis-cache-v33";
-const FILES = ["./", "./index.html", "./styles.css", "./app.js", "./manifest.webmanifest"];
+const CACHE_NAME = "jarvis-cache-v34";
+const FILES = ["./", "./index.html", "./styles.css", "./app.js?v=jarvis-34", "./manifest.webmanifest"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
@@ -31,7 +31,7 @@ self.addEventListener("fetch", event => {
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
         }
         return response;
-      }).catch(() => caches.match("./index.html"));
+      }).catch(() => event.request.mode === "navigate" ? caches.match("./index.html") : Response.error());
     })
   );
 });
