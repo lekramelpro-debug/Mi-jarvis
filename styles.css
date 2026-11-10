@@ -99,3 +99,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .business-panel{margin-top:16px}
 .business-panel .futsal-review-form input,.business-panel .futsal-review-form textarea{width:100%;min-width:0;background:#071522;border:1px solid #28516a;border-radius:9px;padding:11px;color:var(--text);font:inherit;line-height:1.45}
 .business-panel .futsal-review-form textarea{resize:vertical;max-height:150px}
+
+/* Respeta la preferencia del sistema por reducir animaciones. */
+@media (prefers-reduced-motion: reduce){
+  .reactor:before,.reactor:after{animation:none!important}
+}
