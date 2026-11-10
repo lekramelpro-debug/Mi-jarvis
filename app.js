@@ -471,17 +471,35 @@ let syncPending = false;
 let syncPendingForcePush = false;
 
 async function syncRequest(action, data) {
-  const response = await fetch(AI_ENDPOINT, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer " + settings.syncToken
-    },
-    body: JSON.stringify({ action, data })
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || "No se pudo sincronizar.");
-  return result;
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(AI_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + settings.syncToken
+      },
+      body: JSON.stringify({ action, data }),
+      signal: controller.signal
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "No se pudo sincronizar.");
+    return result;
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("La sincronización ha superado 15 segundos. Comprueba la conexión y vuelve a intentarlo.");
+    }
+    const networkFailure = error instanceof TypeError ||
+      /failed to fetch|networkerror|fetch failed/i.test(String(error?.message || ""));
+    if (networkFailure) {
+      throw new Error("No se ha podido conectar con la memoria sincronizada. Comprueba Internet y vuelve a intentarlo.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
 }
 
 async function syncNow(silent = false, forcePush = true) {
