@@ -357,11 +357,15 @@ function extractSchedule(source, defaultReminder = false) {
     if (explicit) {
       let year = explicit[3] ? Number(explicit[3]) : now.getFullYear();
       if (year < 100) year += 2000;
-      date = new Date(year, Number(explicit[2]) - 1, Number(explicit[1]));
-      if (!explicit[3] && date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
+      const day = Number(explicit[1]);
+      const month = Number(explicit[2]);
+      date = new Date(year, month - 1, day);
+      hasDate = date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day;
+      if (hasDate && !explicit[3] && date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) {
         date.setFullYear(date.getFullYear() + 1);
       }
-      hasDate = !Number.isNaN(date.getTime());
       cleaned = cleaned.replace(explicit[0], " ");
     }
   }
@@ -675,7 +679,9 @@ async function processCommandInternal(raw) {
     const calendarDetails = match[1].replace(/\b(?:en|al)\s+(?:mi\s+)?calendario\b/ig, " ").trim();
     const schedule = extractSchedule(calendarDetails, false);
     const hasClearTime = schedule.hasTime;
-    if (!schedule.hasDate || !hasClearTime || schedule.timeAmbiguous) {
+    if (!schedule.hasDate && /\\b(?:el\\s+)?\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/.test(calendarDetails)) {
+      reply = "La fecha indicada no existe. Comprueba el día y el mes antes de crear el evento.";
+    } else if (!schedule.hasDate || !hasClearTime || schedule.timeAmbiguous) {
       reply = "Puedo preparar el evento en el calendario de tu Samsung. Dime el día y la hora exactos. Si dices «a las seis», aclara si es de la mañana o de la tarde; por ejemplo: «agenda una cita mañana a las seis de la tarde».";
     } else {
       const title = (schedule.text || "Cita").replace(/^(?:una\s+)?(?:cita|reunión|reunion|evento)\s*/i, "").trim() || "Cita";
@@ -688,7 +694,9 @@ async function processCommandInternal(raw) {
   } else if ((match = commandText.match(/^(?:recuérdame|recuerdame|avísame|avisame)\s+(.+)/i))) {
     const schedule = extractSchedule(match[1], true);
     const taskText = schedule.text || "Recordatorio";
-    if (!schedule.due) {
+    if (!schedule.hasDate && /\\b(?:el\\s+)?\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/.test(match[1])) {
+      reply = "La fecha indicada no existe. Comprueba el día y el mes; no he creado el recordatorio.";
+    } else if (!schedule.due) {
       addTask(taskText);
       reply = "He guardado «" + taskText + "» como tarea. Para programar el aviso, dime el día y la hora, por ejemplo: «recuérdame estudiar mañana a las 18:00».";
     } else {
@@ -699,9 +707,13 @@ async function processCommandInternal(raw) {
   } else if ((match = commandText.match(/^(?:añade|agrega|crea|apunta)\s+(?:una\s+)?tarea\s+(?:de\s+)?(.+)/i))) {
     const schedule = extractSchedule(match[1], false);
     const taskText = schedule.text || "Nueva tarea";
-    addTask(taskText, "Normal", schedule.due);
-    reply = "He añadido la tarea: " + taskText +
-      (schedule.due ? " · Fecha: " + dueDescription(schedule.due) : "") + ".";
+    if (!schedule.hasDate && /\\b(?:el\\s+)?\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/.test(match[1])) {
+      reply = "La fecha indicada no existe. Comprueba el día y el mes; no he creado la tarea.";
+    } else {
+      addTask(taskText, "Normal", schedule.due);
+      reply = "He añadido la tarea: " + taskText +
+        (schedule.due ? " · Fecha: " + dueDescription(schedule.due) : "") + ".";
+    }
   } else if ((match = commandText.match(/^(?:guarda|anota|recuerda)\s+(?:que\s+)?(.+)/i))) {
     addNote(match[1]);
     reply = "He guardado en memoria: " + match[1] + ".";
