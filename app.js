@@ -679,7 +679,7 @@ async function processCommandInternal(raw) {
     const calendarDetails = match[1].replace(/\b(?:en|al)\s+(?:mi\s+)?calendario\b/ig, " ").trim();
     const schedule = extractSchedule(calendarDetails, false);
     const hasClearTime = schedule.hasTime;
-    if (!schedule.hasDate && /\\b(?:el\\s+)?\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/.test(calendarDetails)) {
+    if (!schedule.hasDate && /\b(?:el\s+)?\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/.test(calendarDetails)) {
       reply = "La fecha indicada no existe. Comprueba el día y el mes antes de crear el evento.";
     } else if (!schedule.hasDate || !hasClearTime || schedule.timeAmbiguous) {
       reply = "Puedo preparar el evento en el calendario de tu Samsung. Dime el día y la hora exactos. Si dices «a las seis», aclara si es de la mañana o de la tarde; por ejemplo: «agenda una cita mañana a las seis de la tarde».";
@@ -694,7 +694,7 @@ async function processCommandInternal(raw) {
   } else if ((match = commandText.match(/^(?:recuérdame|recuerdame|avísame|avisame)\s+(.+)/i))) {
     const schedule = extractSchedule(match[1], true);
     const taskText = schedule.text || "Recordatorio";
-    if (!schedule.hasDate && /\\b(?:el\\s+)?\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/.test(match[1])) {
+    if (!schedule.hasDate && /\b(?:el\s+)?\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/.test(match[1])) {
       reply = "La fecha indicada no existe. Comprueba el día y el mes; no he creado el recordatorio.";
     } else if (!schedule.due) {
       addTask(taskText);
@@ -707,7 +707,7 @@ async function processCommandInternal(raw) {
   } else if ((match = commandText.match(/^(?:añade|agrega|crea|apunta)\s+(?:una\s+)?tarea\s+(?:de\s+)?(.+)/i))) {
     const schedule = extractSchedule(match[1], false);
     const taskText = schedule.text || "Nueva tarea";
-    if (!schedule.hasDate && /\\b(?:el\\s+)?\\d{1,2}[/-]\\d{1,2}(?:[/-]\\d{2,4})?\\b/.test(match[1])) {
+    if (!schedule.hasDate && /\b(?:el\s+)?\d{1,2}[/-]\d{1,2}(?:[/-]\d{2,4})?\b/.test(match[1])) {
       reply = "La fecha indicada no existe. Comprueba el día y el mes; no he creado la tarea.";
     } else {
       addTask(taskText, "Normal", schedule.due);
