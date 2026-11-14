@@ -4,7 +4,8 @@ Aplicación web personal en español para móvil y ordenador.
 
 ## Funciones
 
-- Chat con IA mediante Cloudflare Workers AI.
+- Chat con doble motor de IA: Cloudflare Workers AI como principal y Gemini como respaldo automático si Cloudflare falla o no devuelve texto.
+- Las claves de ambos proveedores se mantienen como secretos del Worker; nunca se exponen al navegador.
 - Reconocimiento de voz y respuestas habladas con selección de una voz instalada en cada dispositivo, más ajustes de velocidad y tono.
 - Memoria de notas y tareas guardada localmente.
 - Sincronización automática opcional de notas y tareas entre dispositivos mediante Cloudflare D1, con actualización al volver a la web y comprobación periódica mientras permanece abierta.
