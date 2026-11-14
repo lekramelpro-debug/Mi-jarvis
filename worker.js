@@ -119,6 +119,83 @@ async function handleSync(request, env, body, origin) {
   }
 }
 
+const GEMINI_MODEL = "gemini-3.8-flash";
+const AI_TIMEOUT_MS = 25000;
+
+function withTimeout(promise, ms, label) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(label + " ha superado el tiempo máximo de espera.")), ms);
+    })
+  ]).finally(() => clearTimeout(timer));
+}
+
+async function askCloudflare(env, messages) {
+  if (!env.AI || typeof env.AI.run !== "function") {
+    throw new Error("Workers AI no está disponible.");
+  }
+  const result = await withTimeout(
+    env.AI.run(MODEL, { messages, max_tokens: 2048, temperature: 0.65 }),
+    AI_TIMEOUT_MS,
+    "Cloudflare AI"
+  );
+  const reply = result?.choices?.[0]?.message?.content;
+  if (typeof reply !== "string" || !reply.trim()) {
+    throw new Error("Cloudflare AI no ha devuelto texto.");
+  }
+  return reply.trim();
+}
+
+async function askGemini(env, messages) {
+  if (typeof env.GEMINI_API_KEY !== "string" || !env.GEMINI_API_KEY.trim()) {
+    throw new Error("Gemini no está configurado: falta el secreto GEMINI_API_KEY.");
+  }
+
+  const system = messages.find(message => message.role === "system")?.content || "";
+  const contents = messages
+    .filter(message => message.role !== "system")
+    .map(message => ({
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: message.content }]
+    }));
+
+  const response = await withTimeout(fetch(
+    "https://generativelanguage.googleapis.com/v1beta/models/" +
+      encodeURIComponent(GEMINI_MODEL) + ":generateContent",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": env.GEMINI_API_KEY
+      },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents,
+        generationConfig: { maxOutputTokens: 2048, temperature: 0.65 }
+      })
+    }
+  ), AI_TIMEOUT_MS, "Gemini");
+
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = typeof data.error?.message === "string"
+      ? data.error.message.slice(0, 220)
+      : "Error HTTP " + response.status;
+    throw new Error("Gemini no ha podido responder: " + detail);
+  }
+
+  const reply = (data.candidates?.[0]?.content?.parts || [])
+    .map(part => typeof part.text === "string" ? part.text : "")
+    .filter(Boolean)
+    .join("\\n")
+    .trim();
+
+  if (!reply) throw new Error("Gemini no ha devuelto texto.");
+  return reply;
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin") || "";
@@ -153,12 +230,6 @@ export default {
 
     if (body.action === "sync_pull" || body.action === "sync_push") {
       return handleSync(request, env, body, origin);
-    }
-
-    if (!env.AI || typeof env.AI.run !== "function") {
-      return json({
-        error: "Falta conectar Workers AI. Añade un binding de Workers AI llamado AI."
-      }, 503, origin);
     }
 
     if (!Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 14) {
@@ -208,20 +279,27 @@ export default {
       return json({ error: "No se ha recibido un mensaje válido." }, 400, origin);
     }
 
+    let cloudflareError = null;
     try {
-      const result = await env.AI.run(MODEL, { messages, max_tokens: 2048, temperature: 0.65 });
-      const reply = result?.choices?.[0]?.message?.content;
-      if (typeof reply !== "string" || !reply.trim()) {
-        return json({
-          error: "El modelo de Cloudflare no ha devuelto una respuesta de texto. Inténtalo de nuevo."
-        }, 502, origin);
-      }
-      return json({ reply: reply.trim() }, 200, origin);
+      const reply = await askCloudflare(env, messages);
+      return json({ reply, provider: "cloudflare" }, 200, origin);
     } catch (error) {
-      const detail = String(error?.message || error || "Error desconocido").slice(0, 240);
+      cloudflareError = String(error?.message || error || "Error desconocido").slice(0, 240);
+    }
+
+    try {
+      const reply = await askGemini(env, messages);
       return json({
-        error: "Workers AI no ha podido responder. Comprueba que el binding AI está activo y vuelve a intentarlo.",
-        detail
+        reply,
+        provider: "gemini",
+        fallback: true
+      }, 200, origin);
+    } catch (geminiError) {
+      const detail = String(geminiError?.message || geminiError || "Error desconocido").slice(0, 240);
+      return json({
+        error: "JARVIS no ha podido obtener respuesta de ninguno de sus dos motores. Comprueba su disponibilidad e inténtalo de nuevo.",
+        cloudflareError,
+        geminiError: detail
       }, 502, origin);
     }
   }
