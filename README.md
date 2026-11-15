@@ -52,5 +52,6 @@ Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz pe
 - Las notas solo se envían al modelo de IA como contexto si activas expresamente esa opción.
 - Los recordatorios locales no son fiables con la página cerrada o suspendida.
 - D1 ofrece una modalidad gratuita con límites de uso; consulta los límites vigentes de Cloudflare.
+- El uso de Workers AI y Gemini puede estar sujeto a cuotas o cargos según el plan y el consumo. La aplicación no tiene un límite automático de gasto; revisa el uso y la facturación con un adulto responsable antes de utilizarla de forma continuada.
 - La investigación abre búsquedas web y no lee automáticamente páginas.
 - La página no puede controlar libremente otras aplicaciones ni leer archivos privados del dispositivo.
