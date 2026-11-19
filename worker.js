@@ -189,7 +189,7 @@ async function askGemini(env, messages) {
   const reply = (data.candidates?.[0]?.content?.parts || [])
     .map(part => typeof part.text === "string" ? part.text : "")
     .filter(Boolean)
-    .join("\\n")
+    .join("\n")
     .trim();
 
   if (!reply) throw new Error("Gemini no ha devuelto texto.");
