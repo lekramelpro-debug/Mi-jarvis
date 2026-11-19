@@ -1,0 +1,31 @@
+name: Worker tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker.js"
+      - "tests/**"
+      - ".github/workflows/worker-tests.yml"
+  pull_request:
+    paths:
+      - "worker.js"
+      - "tests/**"
+      - ".github/workflows/worker-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Ejecutar pruebas del Worker
+        run: node --test tests/worker.test.mjs
