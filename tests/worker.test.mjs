@@ -56,6 +56,18 @@ test("rechaza JSON mal formado sin invocar proveedores", async () => {
   assert.equal(called, false);
 });
 
+test("rechaza JSON válido cuyo nivel superior no sea un objeto", async () => {
+  let called = false;
+  for (const invalidBody of ["null", "[]", '"texto"']) {
+    const response = await worker.fetch(
+      makeRequest(invalidBody),
+      { AI: { run: async () => { called = true; } } }
+    );
+    assert.equal(response.status, 400);
+  }
+  assert.equal(called, false);
+});
+
 test("utiliza Cloudflare cuando devuelve una respuesta válida", async () => {
   const originalFetch = globalThis.fetch;
   let fallbackCalled = false;
