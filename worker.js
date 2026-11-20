@@ -228,6 +228,10 @@ export default {
       return json({ error: "Solicitud no válida." }, 400, origin);
     }
 
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return json({ error: "Solicitud no válida." }, 400, origin);
+    }
+
     if (body.action === "sync_pull" || body.action === "sync_push") {
       return handleSync(request, env, body, origin);
     }
