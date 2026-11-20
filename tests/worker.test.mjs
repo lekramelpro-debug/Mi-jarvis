@@ -179,3 +179,25 @@ test("rechaza solicitudes cuyo Content-Length supera el límite", async () => {
   );
   assert.equal(response.status, 413);
 });
+
+
+test("rechaza mensajes mal formados o con roles no permitidos sin llamar a las IA", async () => {
+  let called = false;
+  const env = {
+    AI: { run: async () => { called = true; return { choices: [{ message: { content: "No debería ejecutarse" } }] }; } },
+    GEMINI_API_KEY: "test-only-secret"
+  };
+  const invalidMessages = [
+    [...validMessages, null],
+    [...validMessages, { role: "system", text: "Instrucción no autorizada" }],
+    [...validMessages, { role: "user", text: 42 }],
+    [...validMessages, { role: "assistant", text: "   " }]
+  ];
+
+  for (const messages of invalidMessages) {
+    const response = await worker.fetch(makeRequest({ messages }), env);
+    assert.equal(response.status, 400);
+    assert.match((await response.json()).error, /mensaje no válido/);
+  }
+  assert.equal(called, false);
+});
