@@ -58,3 +58,19 @@ Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz pe
 - El uso de Workers AI y Gemini puede estar sujeto a cuotas o cargos según el plan y el consumo. La aplicación no tiene un límite automático de gasto; revisa el uso y la facturación con un adulto responsable antes de utilizarla de forma continuada.
 - La investigación abre búsquedas web y no lee automáticamente páginas.
 - La página no puede controlar libremente otras aplicaciones ni leer archivos privados del dispositivo.
+
+## Instalar JARVIS en Android
+
+JARVIS es una PWA. Para crear un acceso directo:
+1. Abre la dirección HTTPS publicada de JARVIS en Chrome para Android.
+2. Abre el menú de tres puntos (⋮).
+3. Selecciona **Instalar aplicación** o **Añadir a pantalla de inicio** y confirma.
+4. Abre JARVIS desde el nuevo icono.
+
+En Samsung Internet, abre el menú del navegador y busca **Añadir página a → Pantalla Inicio**. El texto exacto puede variar según la versión del navegador. Si aparece el botón **Instalar** dentro de JARVIS, también puedes usarlo; si el navegador no ofrece instalación automática, el botón muestra los pasos manuales.
+
+La instalación PWA no convierte la web en una aplicación con control total del teléfono. El navegador solo permite funciones expresamente autorizadas, como notificaciones, voz o abrir enlaces. JARVIS no puede leer libremente otras aplicaciones, activar el micrófono en segundo plano ni realizar llamadas telefónicas por sí solo.
+
+## Integración Android futura
+
+Para acciones más profundas se estudiará una aplicación complementaria Android, con permisos mínimos, visibles y revocables. Cada automatización deberá pedir autorización antes de actuar y mostrar un registro de lo realizado. Las llamadas automáticas no forman parte de la PWA actual; antes de considerarlas se necesitarán un proveedor telefónico, consentimiento explícito, controles antiabuso y una política clara para alertas verdaderamente críticas. No se habilitarán llamadas ni control remoto oculto.
