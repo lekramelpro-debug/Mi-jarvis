@@ -14,6 +14,7 @@ function makeRequest(body, options = {}) {
   const headers = new Headers();
   if (options.origin !== null) headers.set("Origin", options.origin || ALLOWED_ORIGIN);
   if (options.contentLength) headers.set("Content-Length", String(options.contentLength));
+  if (options.authorization) headers.set("Authorization", options.authorization);
   if (body !== undefined) headers.set("Content-Type", "application/json");
   return new Request("https://jarvis-worker.test/", {
     method,
@@ -200,4 +201,87 @@ test("rechaza mensajes mal formados o con roles no permitidos sin llamar a las I
     assert.match((await response.json()).error, /mensaje no válido/);
   }
   assert.equal(called, false);
+});
+
+
+test("rechaza sincronizaciones incompletas antes de tocar D1", async () => {
+  let databaseTouched = false;
+  const response = await worker.fetch(
+    makeRequest({
+      action: "sync_push",
+      data: { notes: [], tasks: [] }
+    }, { authorization: "Bearer correct-token-for-tests" }),
+    {
+      JARVIS_SYNC_TOKEN: "correct-token-for-tests",
+      DB: { prepare: () => { databaseTouched = true; throw new Error("No debería consultar D1"); } }
+    }
+  );
+  assert.equal(response.status, 400);
+  assert.equal(databaseTouched, false);
+});
+
+test("evita sobrescribir memoria si otro dispositivo ya guardó una versión nueva", async () => {
+  let row = null;
+  let writes = 0;
+  const DB = {
+    prepare(sql) {
+      if (sql.startsWith("CREATE TABLE")) {
+        return { run: async () => ({ meta: { changes: 0 } }) };
+      }
+      if (sql.includes("INSERT INTO jarvis_vault")) {
+        return {
+          bind(...values) {
+            return {
+              run: async () => {
+                const [vaultId, payload, updatedAt, expectedUpdatedAt] = values;
+                if (row && row.updated_at !== expectedUpdatedAt) return { meta: { changes: 0 } };
+                if (!row && expectedUpdatedAt !== null) return { meta: { changes: 0 } };
+                row = { vault_id: vaultId, payload, updated_at: updatedAt };
+                writes++;
+                return { meta: { changes: 1 } };
+              }
+            };
+          }
+        };
+      }
+      if (sql.includes("SELECT updated_at")) {
+        return { bind: () => ({ first: async () => row ? { updated_at: row.updated_at } : null }) };
+      }
+      throw new Error("Consulta D1 inesperada en la prueba.");
+    }
+  };
+  const env = { JARVIS_SYNC_TOKEN: "correct-token-for-tests", DB };
+  const headers = { authorization: "Bearer correct-token-for-tests" };
+  const first = await worker.fetch(
+    makeRequest({
+      action: "sync_push",
+      data: { notes: [{ id: "n1", text: "Nota inicial" }], tasks: [], expectedUpdatedAt: null }
+    }, headers),
+    env
+  );
+  assert.equal(first.status, 200);
+  const firstBody = await first.json();
+
+  const stale = await worker.fetch(
+    makeRequest({
+      action: "sync_push",
+      data: { notes: [{ id: "n2", text: "Cambio desde otro dispositivo" }], tasks: [], expectedUpdatedAt: null }
+    }, headers),
+    env
+  );
+  const staleBody = await stale.json();
+  assert.equal(stale.status, 409);
+  assert.equal(staleBody.updatedAt, firstBody.updatedAt);
+  assert.match(staleBody.error, /otro dispositivo/);
+  assert.equal(writes, 1);
+
+  const current = await worker.fetch(
+    makeRequest({
+      action: "sync_push",
+      data: { notes: [{ id: "n1", text: "Nota combinada" }], tasks: [], expectedUpdatedAt: firstBody.updatedAt }
+    }, headers),
+    env
+  );
+  assert.equal(current.status, 200);
+  assert.equal(writes, 2);
 });
