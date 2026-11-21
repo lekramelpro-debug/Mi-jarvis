@@ -489,7 +489,11 @@ async function syncRequest(action, data) {
       signal: controller.signal
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "No se pudo sincronizar.");
+    if (!response.ok) {
+      const error = new Error(result.error || "No se pudo sincronizar.");
+      error.status = response.status;
+      throw error;
+    }
     return result;
   } catch (error) {
     if (error?.name === "AbortError") {
@@ -506,7 +510,7 @@ async function syncRequest(action, data) {
   }
 }
 
-async function syncNow(silent = false, forcePush = true) {
+async function syncNow(silent = false, forcePush = true, conflictRetry = false) {
   if (!settings.syncToken) {
     if ($("syncStatus")) $("syncStatus").textContent = "Primero crea y guarda una clave de sincronización.";
     if (!silent) say("Primero introduce y guarda tu clave de sincronización.");
@@ -538,12 +542,21 @@ async function syncNow(silent = false, forcePush = true) {
     renderAll();
 
     if (forcePush || changedRemotely) {
-      await syncRequest("sync_push", { notes, tasks });
+      await syncRequest("sync_push", {
+        notes,
+        tasks,
+        expectedUpdatedAt: remote.updatedAt ?? null
+      });
     }
     if (status) status.textContent = "Sincronizado · " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
     if (!silent) say("Memoria y tareas sincronizadas con tus otros dispositivos.");
     return true;
   } catch (error) {
+    if (error?.status === 409 && !conflictRetry) {
+      if (status) status.textContent = "Cambios simultáneos detectados. Combinando de nuevo…";
+      window.setTimeout(() => syncNow(true, false, true), 0);
+      return false;
+    }
     if (status) status.textContent = "No se ha podido sincronizar: " + error.message;
     if (!silent) say("Error de sincronización: " + error.message);
     return false;
