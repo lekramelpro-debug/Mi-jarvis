@@ -1529,17 +1529,57 @@ renderAll();
 $("systemState").textContent = "ASISTENTE CONECTADO";
 
 let installPrompt = null;
+const installButton = $("installBtn");
+const isInstalled = () =>
+  window.matchMedia("(display-mode: standalone)").matches ||
+  window.navigator.standalone === true;
+
+if (isInstalled()) {
+  installButton.hidden = true;
+} else {
+  // Keep a visible fallback: some Android browsers do not emit beforeinstallprompt.
+  installButton.hidden = false;
+}
+
 window.addEventListener("beforeinstallprompt", event => {
   event.preventDefault();
   installPrompt = event;
-  $("installBtn").hidden = false;
+  installButton.hidden = false;
 });
-$("installBtn").addEventListener("click", async () => {
-  if (!installPrompt) return;
-  installPrompt.prompt();
-  await installPrompt.userChoice;
+
+installButton.addEventListener("click", async () => {
+  if (isInstalled()) {
+    installButton.hidden = true;
+    return;
+  }
+
+  if (!installPrompt) {
+    say("Para crear el acceso directo en Android: abre JARVIS en Chrome, toca el menú ⋮ y elige «Instalar aplicación» o «Añadir a pantalla de inicio». En Samsung Internet, abre el menú y busca «Añadir página a» → «Pantalla Inicio». Si la opción no aparece, comprueba que estás usando la web oficial y que está cargada por HTTPS.");
+    return;
+  }
+
+  installButton.disabled = true;
+  try {
+    installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice?.outcome === "accepted") {
+      say("Solicitud de instalación aceptada. Android añadirá JARVIS a tus aplicaciones.");
+    } else {
+      say("No se ha instalado JARVIS. Puedes volver a intentarlo cuando quieras.");
+    }
+  } catch {
+    say("No se ha podido abrir la instalación automática. Usa el menú ⋮ del navegador y elige «Instalar aplicación» o «Añadir a pantalla de inicio».");
+  } finally {
+    installPrompt = null;
+    installButton.disabled = false;
+    installButton.hidden = isInstalled();
+  }
+});
+
+window.addEventListener("appinstalled", () => {
   installPrompt = null;
-  $("installBtn").hidden = true;
+  installButton.hidden = true;
+  say("JARVIS se ha instalado correctamente en este dispositivo.");
 });
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
