@@ -1,15 +1,23 @@
-name: Worker tests
+name: Worker and PWA tests
 
 on:
   push:
     branches: [main, "automation/**"]
     paths:
       - "worker.js"
+      - "app.js"
+      - "index.html"
+      - "service-worker.js"
+      - "manifest.webmanifest"
       - "tests/**"
       - ".github/workflows/worker-tests.yml"
   pull_request:
     paths:
       - "worker.js"
+      - "app.js"
+      - "index.html"
+      - "service-worker.js"
+      - "manifest.webmanifest"
       - "tests/**"
       - ".github/workflows/worker-tests.yml"
   workflow_dispatch:
@@ -27,5 +35,5 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Ejecutar pruebas del Worker
-        run: node --test tests/worker.test.mjs
+      - name: Ejecutar pruebas
+        run: node --test tests/*.test.mjs
