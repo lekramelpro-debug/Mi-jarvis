@@ -64,6 +64,28 @@ async function handleSync(request, env, body, origin) {
     return json({ error: "Clave de sincronización incorrecta." }, 401, origin);
   }
 
+  if (body.action === "sync_push") {
+    const data = body.data;
+    const expectedUpdatedAt = data?.expectedUpdatedAt;
+    const validVersion = expectedUpdatedAt === null ||
+      (typeof expectedUpdatedAt === "string" &&
+        expectedUpdatedAt.length <= 50 &&
+        !Number.isNaN(Date.parse(expectedUpdatedAt)));
+    if (
+      !data ||
+      typeof data !== "object" ||
+      Array.isArray(data) ||
+      !Array.isArray(data.notes) ||
+      !Array.isArray(data.tasks) ||
+      !Object.prototype.hasOwnProperty.call(data, "expectedUpdatedAt") ||
+      !validVersion
+    ) {
+      return json({
+        error: "La sincronización necesita notas, tareas y la versión leída del servidor."
+      }, 400, origin);
+    }
+  }
+
   try {
     await env.DB.prepare(
       "CREATE TABLE IF NOT EXISTS jarvis_vault (vault_id TEXT PRIMARY KEY, payload TEXT NOT NULL, updated_at TEXT NOT NULL)"
@@ -104,9 +126,19 @@ async function handleSync(request, env, body, origin) {
       }
 
       const updatedAt = new Date().toISOString();
-      await env.DB.prepare(
-        "INSERT INTO jarvis_vault (vault_id, payload, updated_at) VALUES (?, ?, ?) ON CONFLICT(vault_id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at"
-      ).bind("main", payload, updatedAt).run();
+      const writeResult = await env.DB.prepare(
+        "INSERT INTO jarvis_vault (vault_id, payload, updated_at) VALUES (?, ?, ?) ON CONFLICT(vault_id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at WHERE jarvis_vault.updated_at = ?"
+      ).bind("main", payload, updatedAt, body.data.expectedUpdatedAt).run();
+
+      if (Number(writeResult?.meta?.changes || 0) !== 1) {
+        const current = await env.DB.prepare(
+          "SELECT updated_at FROM jarvis_vault WHERE vault_id = ?"
+        ).bind("main").first();
+        return json({
+          error: "La memoria ha cambiado en otro dispositivo. Se volverá a combinar antes de guardar.",
+          updatedAt: current?.updated_at || null
+        }, 409, origin);
+      }
 
       return json({ ok: true, updatedAt }, 200, origin);
     }
