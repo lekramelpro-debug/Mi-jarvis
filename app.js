@@ -958,7 +958,7 @@ $("searchForm").addEventListener("submit", event => {
 });
 
 async function showReminder(task) {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return false;
   const title = "JARVIS · Recordatorio";
   const options = { body: task.text, tag: "jarvis-task-" + task.created };
   try {
@@ -968,32 +968,53 @@ async function showReminder(task) {
     } else {
       new Notification(title, options);
     }
+    return true;
   } catch {
     try {
       new Notification(title, options);
-    } catch {}
+      return true;
+    } catch {
+      return false;
+    }
   }
 }
 
-function checkReminders() {
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-  const tasks = read(KEYS.tasks);
-  let changed = false;
-  const dueTasks = [];
-  const now = Date.now();
+let remindersCheckInProgress = false;
 
-  tasks.forEach(task => {
-    if (task.done || task.notified || !task.due || !task.due.includes("T")) return;
-    const timestamp = new Date(task.due).getTime();
-    if (!Number.isNaN(timestamp) && timestamp <= now) {
-      task.notified = true;
-      changed = true;
-      if (timestamp >= now - 24 * 60 * 60 * 1000) dueTasks.push(task);
+async function checkReminders() {
+  if (remindersCheckInProgress ||
+      !("Notification" in window) ||
+      Notification.permission !== "granted") return;
+
+  remindersCheckInProgress = true;
+  try {
+    const tasks = read(KEYS.tasks);
+    let changed = false;
+    const now = Date.now();
+
+    for (const task of tasks) {
+      if (task.done || task.notified || !task.due || !task.due.includes("T")) continue;
+      const timestamp = new Date(task.due).getTime();
+      if (Number.isNaN(timestamp) || timestamp > now) continue;
+
+      // Evita avisos antiguos, pero no marca como enviado un aviso reciente
+      // hasta que el navegador confirme que pudo mostrarlo.
+      if (timestamp < now - 24 * 60 * 60 * 1000) {
+        task.notified = true;
+        changed = true;
+        continue;
+      }
+
+      if (await showReminder(task)) {
+        task.notified = true;
+        changed = true;
+      }
     }
-  });
 
-  if (changed) write(KEYS.tasks, tasks);
-  dueTasks.forEach(task => showReminder(task));
+    if (changed) write(KEYS.tasks, tasks);
+  } finally {
+    remindersCheckInProgress = false;
+  }
 }
 
 $("searchInput").setAttribute("aria-label", "Buscar en internet");
