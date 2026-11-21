@@ -44,6 +44,8 @@ La tabla `jarvis_vault` se crea automáticamente la primera vez que se usa la si
 
 La clave se guarda en el almacenamiento local del navegador y se envía al Worker únicamente en la petición de sincronización. No se añade al repositorio ni se envía al modelo de IA.
 
+Cada guardado de memoria incluye la versión que el dispositivo acaba de leer. D1 solo acepta la escritura si esa versión sigue siendo la actual. Si dos dispositivos intentan guardar a la vez, el segundo recibe un conflicto, vuelve a descargar la memoria, combina las notas y tareas por identificador y fecha de actualización y reintenta una vez. Esto evita que una escritura atrasada sustituya silenciosamente una versión más reciente.
+
 Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz permanecen locales. La selección de voz, velocidad y tono debe configurarse por separado en cada dispositivo porque las voces disponibles dependen del sistema y del navegador.
 
 ## Privacidad y límites
