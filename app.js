@@ -621,8 +621,19 @@ async function askJarvis(text) {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
+        const providerErrors = [
+          ["Cloudflare", data.cloudflareError],
+          ["Gemini", data.geminiError]
+        ].filter(([, value]) => typeof value === "string" && value.trim());
+
+        const diagnostics = providerErrors.length
+          ? "\n\nDiagnóstico técnico:\n" + providerErrors
+              .map(([provider, value]) => provider + ": " + value.trim().slice(0, 240))
+              .join("\n")
+          : "";
+
         const detail = typeof data.detail === "string" ? " (" + data.detail + ")" : "";
-        return (data.error || "No se pudo obtener respuesta.") + detail;
+        return (data.error || "No se pudo obtener respuesta.") + detail + diagnostics;
       }
       if (typeof data.reply !== "string" || !data.reply.trim()) return "La IA no ha devuelto una respuesta. Inténtalo otra vez.";
       return data.reply.trim();
