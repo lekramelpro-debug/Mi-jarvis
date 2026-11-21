@@ -71,6 +71,8 @@ En Samsung Internet, abre el menú del navegador y busca **Añadir página a →
 
 La instalación PWA no convierte la web en una aplicación con control total del teléfono. El navegador solo permite funciones expresamente autorizadas, como notificaciones, voz o abrir enlaces. JARVIS no puede leer libremente otras aplicaciones, activar el micrófono en segundo plano ni realizar llamadas telefónicas por sí solo.
 
-## Integración Android futura
+## Aplicación complementaria Android
 
-Para acciones más profundas se estudiará una aplicación complementaria Android, con permisos mínimos, visibles y revocables. Cada automatización deberá pedir autorización antes de actuar y mostrar un registro de lo realizado. Las llamadas automáticas no forman parte de la PWA actual; antes de considerarlas se necesitarán un proveedor telefónico, consentimiento explícito, controles antiabuso y una política clara para alertas verdaderamente críticas. No se habilitarán llamadas ni control remoto oculto.
+Hay un proyecto Android inicial en [`android-companion/`](./android-companion/). Incluye accesos para abrir Chrome, ChatGPT y Claude: intenta abrir la app instalada y recurre a su web si no está disponible. No solicita permisos sensibles ni ejecuta acciones en segundo plano. Consulta su README para compilarlo con Android Studio y JDK 17. La compilación automática se comprueba mediante GitHub Actions; hasta que esa comprobación termine, el APK no debe considerarse validado.
+
+Esta primera versión no controla libremente el teléfono. Cualquier automatización futura deberá pedir autorización, usar permisos mínimos y revocables y mostrar lo que ha hecho. No se habilitarán llamadas automáticas ni control remoto oculto.
