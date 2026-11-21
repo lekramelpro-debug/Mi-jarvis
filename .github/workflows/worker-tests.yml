@@ -2,7 +2,7 @@ name: Worker tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, "automation/**"]
     paths:
       - "worker.js"
       - "tests/**"
