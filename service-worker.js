@@ -1,5 +1,5 @@
-const CACHE_NAME = "jarvis-cache-v39";
-const FILES = ["./", "./index.html", "./styles.css", "./app.js?v=jarvis-39", "./manifest.webmanifest"];
+const CACHE_NAME = "jarvis-cache-v41";
+const FILES = ["./", "./index.html", "./styles.css", "./app.js?v=jarvis-41", "./manifest.webmanifest"];
 
 self.addEventListener("install", event => {
   event.waitUntil(
