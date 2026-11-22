@@ -88,7 +88,7 @@ test("rechaza JSON válido cuyo nivel superior no sea un objeto", async () => {
   assert.equal(called, false);
 });
 
-test("lanza ambos motores en paralelo y devuelve el primero que responde", async () => {
+test("prioriza Cloudflare y no consume Gemini si responde rápido", async () => {
   const originalFetch = globalThis.fetch;
   let geminiStarted = false;
   globalThis.fetch = async () => {
@@ -101,11 +101,7 @@ test("lanza ambos motores en paralelo y devuelve el primero que responde", async
     const response = await worker.fetch(
       makeRequest({ messages: validMessages }),
       {
-        AI: { run: async () => {
-          await Promise.resolve();
-          assert.equal(geminiStarted, true, "Gemini debe iniciarse antes de esperar a Cloudflare");
-          return { choices: [{ message: { content: "Respuesta Cloudflare" } }] };
-        } },
+        AI: { run: async () => ({ choices: [{ message: { content: "Respuesta Cloudflare" } }] }) },
         GEMINI_API_KEY: "test-only-secret"
       }
     );
@@ -113,7 +109,7 @@ test("lanza ambos motores en paralelo y devuelve el primero que responde", async
     assert.equal(response.status, 200);
     assert.equal(data.provider, "cloudflare");
     assert.equal(data.reply, "Respuesta Cloudflare");
-    assert.equal(geminiStarted, true);
+    assert.equal(geminiStarted, false);
   } finally {
     globalThis.fetch = originalFetch;
   }
