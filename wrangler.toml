@@ -14,3 +14,11 @@ binding = "DB"
 database_name = "jarvis-memory"
 database_id = "d808c2e4-aa71-45a6-82e1-8b1f89ba7865"
 
+# Preview usa recursos separados para no escribir en la memoria de producción.
+[previews.ai]
+binding = "AI"
+
+[[previews.d1_databases]]
+binding = "DB"
+database_name = "jarvis-memory-preview"
+database_id = "7e71aaaa-8320-4410-97ab-ba4617eaa7de"
