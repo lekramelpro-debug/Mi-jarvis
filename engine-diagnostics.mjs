@@ -14,7 +14,7 @@ export function providerDiagnostic(provider, error) {
     return `${label}: respuesta vacía`;
   }
 
-  const status = message.match(/\b(?:HTTP\s*)?(401|403|404|408|429|5\d{2})(?:\s+\(([A-Z_]{2,40})\))?/i);
+  const status = message.match(/\b(?:HTTP\s*)?(400|401|402|403|404|408|409|413|422|429|5\d{2})(?:\s+\(([A-Z_]{2,40})\))?/i);
   if (status) {
     return `${label}: HTTP ${status[1]}${status[2] ? ` (${status[2]})` : ""}`;
   }
