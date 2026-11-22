@@ -102,6 +102,7 @@ test("lanza ambos motores en paralelo y devuelve el primero que responde", async
       makeRequest({ messages: validMessages }),
       {
         AI: { run: async () => {
+          await Promise.resolve();
           assert.equal(geminiStarted, true, "Gemini debe iniciarse antes de esperar a Cloudflare");
           return { choices: [{ message: { content: "Respuesta Cloudflare" } }] };
         } },
