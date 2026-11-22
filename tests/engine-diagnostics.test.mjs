@@ -73,3 +73,8 @@ test("Cloudflare Previews usa bindings AI y una D1 aislada", async () => {
   assert.match(wrangler, /database_id\s*=\s*"7e71aaaa-8320-4410-97ab-ba4617eaa7de"/);
   assert.doesNotMatch(wrangler, /\[\[previews\.d1_databases\]\][\s\S]*?database_id\s*=\s*"d808c2e4-aa71-45a6-82e1-8b1f89ba7865"/);
 });
+
+test("Gemini une las partes de texto con saltos de línea reales", async () => {
+  const worker = await readFile(resolve(root, "worker.js"), "utf8");
+  assert.match(worker, /\.join\("\\n"\)/);
+});
