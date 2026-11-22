@@ -154,7 +154,7 @@ async function handleSync(request, env, body, origin) {
 }
 
 const GEMINI_MODEL = "gemini-3.8-flash";
-const AI_TIMEOUT_MS = 25000;
+const AI_TIMEOUT_MS = 15000;
 
 function withTimeout(promise, ms, label) {
   let timer;
@@ -171,7 +171,7 @@ async function askCloudflare(env, messages) {
     throw new Error("Workers AI no está disponible.");
   }
   const result = await withTimeout(
-    env.AI.run(MODEL, { messages, max_tokens: 2048, temperature: 0.65 }),
+    env.AI.run(MODEL, { messages, max_tokens: 1024, temperature: 0.65 }),
     AI_TIMEOUT_MS,
     "Cloudflare AI"
   );
@@ -207,7 +207,7 @@ async function askGemini(env, messages) {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: system }] },
         contents,
-        generationConfig: { maxOutputTokens: 2048, temperature: 0.65 }
+        generationConfig: { maxOutputTokens: 1024, temperature: 0.65 }
       })
     }
   ), AI_TIMEOUT_MS, "Gemini");
@@ -329,27 +329,31 @@ export default {
       return json({ error: "No se ha recibido un mensaje válido." }, 400, origin);
     }
 
-    let cloudflareError = null;
-    try {
-      const reply = await askCloudflare(env, messages);
-      return json({ reply, provider: "cloudflare" }, 200, origin);
-    } catch (error) {
-      cloudflareError = String(error?.message || error || "Error desconocido").slice(0, 240);
-    }
-
-    try {
-      const reply = await askGemini(env, messages);
-      return json({
+    // Lanza ambos motores a la vez y devuelve el primero que consiga responder.
+    // Promise.any ignora fallos individuales mientras el otro proveedor siga trabajando.
+    const providers = [
+      askCloudflare(env, messages).then(reply => ({
+        reply,
+        provider: "cloudflare"
+      })),
+      askGemini(env, messages).then(reply => ({
         reply,
         provider: "gemini",
         fallback: true
-      }, 200, origin);
-    } catch (geminiError) {
-      const detail = String(geminiError?.message || geminiError || "Error desconocido").slice(0, 240);
+      }))
+    ];
+
+    try {
+      const winner = await Promise.any(providers);
+      return json(winner, 200, origin);
+    } catch (error) {
+      const failures = Array.isArray(error?.errors) ? error.errors : [];
+      const cloudflareError = String(failures[0]?.message || failures[0] || "Error desconocido").slice(0, 240);
+      const geminiError = String(failures[1]?.message || failures[1] || "Error desconocido").slice(0, 240);
       return json({
         error: "JARVIS no ha podido obtener respuesta de ninguno de sus dos motores. Comprueba su disponibilidad e inténtalo de nuevo.",
         cloudflareError,
-        geminiError: detail
+        geminiError
       }, 502, origin);
     }
   }
