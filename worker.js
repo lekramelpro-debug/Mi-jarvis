@@ -349,10 +349,12 @@ export default {
       reply => ({ ok: true, reply, provider: "gemini", fallback: true }),
       error => ({ ok: false, provider: "gemini", error })
     );
-    const cloudflareSuccess = outcome => outcome.ok ? outcome : Promise.reject(outcome);
+    const providerSuccess = attempt => attempt.then(
+      outcome => outcome.ok ? outcome : Promise.reject(outcome)
+    );
     const attempts = first.ok === false
-      ? [Promise.reject(first), cloudflareSuccess(geminiAttempt)]
-      : [cloudflareSuccess(cloudflareAttempt), cloudflareSuccess(geminiAttempt)];
+      ? [Promise.reject(first), providerSuccess(geminiAttempt)]
+      : [providerSuccess(cloudflareAttempt), providerSuccess(geminiAttempt)];
 
     try {
       const winner = await Promise.any(attempts);
