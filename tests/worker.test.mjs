@@ -47,6 +47,25 @@ test("responde correctamente a la petición CORS preflight", async () => {
   assert.match(response.headers.get("Access-Control-Allow-Methods"), /POST/);
 });
 
+test("marca las respuestas JSON con cabeceras de privacidad y protección de contenido", async () => {
+  const response = await worker.fetch(
+    makeRequest({ messages: validMessages }),
+    {
+      AI: { run: async () => ({ choices: [{ message: { content: "Respuesta privada" } }] }) }
+    }
+  );
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Cache-Control"), "no-store");
+  assert.equal(response.headers.get("X-Content-Type-Options"), "nosniff");
+
+  const rejected = await worker.fetch(
+    makeRequest({ messages: validMessages }, { origin: "https://example.com" }),
+    {}
+  );
+  assert.equal(rejected.status, 403);
+  assert.equal(rejected.headers.get("Cache-Control"), "no-store");
+});
+
 test("rechaza JSON mal formado sin invocar proveedores", async () => {
   let called = false;
   const response = await worker.fetch(
