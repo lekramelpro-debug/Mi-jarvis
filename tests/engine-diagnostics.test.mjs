@@ -64,3 +64,12 @@ test("la interfaz muestra el detalle seguro del Worker", async () => {
   const app = await readFile(resolve(root, "app.js"), "utf8");
   assert.match(app, /typeof data\.detail === "string"/);
 });
+
+test("Cloudflare Previews usa bindings AI y una D1 aislada", async () => {
+  const wrangler = await readFile(resolve(root, "wrangler.toml"), "utf8");
+  assert.match(wrangler, /^\[previews\.ai\]\s*\nbinding\s*=\s*"AI"/m);
+  assert.match(wrangler, /^\[\[previews\.d1_databases\]\]\s*\nbinding\s*=\s*"DB"/m);
+  assert.match(wrangler, /database_name\s*=\s*"jarvis-memory-preview"/);
+  assert.match(wrangler, /database_id\s*=\s*"7e71aaaa-8320-4410-97ab-ba4617eaa7de"/);
+  assert.doesNotMatch(wrangler, /\[\[previews\.d1_databases\]\][\s\S]*?database_id\s*=\s*"d808c2e4-aa71-45a6-82e1-8b1f89ba7865"/);
+});
