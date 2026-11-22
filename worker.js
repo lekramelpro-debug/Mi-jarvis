@@ -329,27 +329,40 @@ export default {
       return json({ error: "No se ha recibido un mensaje válido." }, 400, origin);
     }
 
-    // Lanza ambos motores a la vez y devuelve el primero que consiga responder.
-    // Promise.any ignora fallos individuales mientras el otro proveedor siga trabajando.
-    const providers = [
-      askCloudflare(env, messages).then(reply => ({
-        reply,
-        provider: "cloudflare"
-      })),
-      askGemini(env, messages).then(reply => ({
-        reply,
-        provider: "gemini",
-        fallback: true
-      }))
-    ];
+    // Prioriza Cloudflare y activa Gemini tras 1,2 s si Cloudflare no responde.
+    // Así se solapan las peticiones lentas sin gastar Gemini en cada consulta rápida.
+    const cloudflareAttempt = askCloudflare(env, messages).then(
+      reply => ({ ok: true, reply, provider: "cloudflare" }),
+      error => ({ ok: false, provider: "cloudflare", error })
+    );
+    let hedgeTimer;
+    const first = await Promise.race([
+      cloudflareAttempt,
+      new Promise(resolve => {
+        hedgeTimer = setTimeout(() => resolve({ slow: true }), 1200);
+      })
+    ]);
+    clearTimeout(hedgeTimer);
+    if (first.ok) return json(first, 200, origin);
+
+    const geminiAttempt = askGemini(env, messages).then(
+      reply => ({ ok: true, reply, provider: "gemini", fallback: true }),
+      error => ({ ok: false, provider: "gemini", error })
+    );
+    const cloudflareSuccess = outcome => outcome.ok ? outcome : Promise.reject(outcome);
+    const attempts = first.ok === false
+      ? [Promise.reject(first), cloudflareSuccess(geminiAttempt)]
+      : [cloudflareSuccess(cloudflareAttempt), cloudflareSuccess(geminiAttempt)];
 
     try {
-      const winner = await Promise.any(providers);
+      const winner = await Promise.any(attempts);
       return json(winner, 200, origin);
     } catch (error) {
       const failures = Array.isArray(error?.errors) ? error.errors : [];
-      const cloudflareError = String(failures[0]?.message || failures[0] || "Error desconocido").slice(0, 240);
-      const geminiError = String(failures[1]?.message || failures[1] || "Error desconocido").slice(0, 240);
+      const cloudflareFailure = failures.find(item => item?.provider === "cloudflare");
+      const geminiFailure = failures.find(item => item?.provider === "gemini");
+      const cloudflareError = String(cloudflareFailure?.error?.message || cloudflareFailure?.error || "Error desconocido").slice(0, 240);
+      const geminiError = String(geminiFailure?.error?.message || geminiFailure?.error || "Error desconocido").slice(0, 240);
       return json({
         error: "JARVIS no ha podido obtener respuesta de ninguno de sus dos motores. Comprueba su disponibilidad e inténtalo de nuevo.",
         cloudflareError,
