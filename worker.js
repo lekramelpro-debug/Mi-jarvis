@@ -15,6 +15,8 @@ function json(data, status, origin) {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
       ...cors(origin)
     }
   });
