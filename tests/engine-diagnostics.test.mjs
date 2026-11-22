@@ -28,6 +28,13 @@ test("conserva el estado HTTP y el código seguro del proveedor", () => {
   );
 });
 
+test("identifica errores de solicitud o credenciales con HTTP 400", () => {
+  assert.equal(
+    providerDiagnostic("Gemini", "Gemini HTTP 400 (API_KEY_INVALID)"),
+    "Gemini: HTTP 400 (API_KEY_INVALID)"
+  );
+});
+
 test("clasifica una respuesta vacía", () => {
   assert.equal(
     providerDiagnostic("Cloudflare", "Cloudflare AI no ha devuelto texto."),
