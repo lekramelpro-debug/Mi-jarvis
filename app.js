@@ -611,7 +611,7 @@ async function askJarvis(text) {
   });
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 60000);
+    const timeoutId = window.setTimeout(() => controller.abort(), 18000);
     try {
       const response = await fetch(AI_ENDPOINT, {
         method: "POST",
@@ -639,7 +639,7 @@ async function askJarvis(text) {
       return data.reply.trim();
     } catch (error) {
       if (error?.name === "AbortError") {
-        return "JARVIS ha superado el tiempo máximo de espera de 60 segundos. No hace falta que resumas el mensaje: prueba de nuevo cuando el servicio esté estable.";
+        return "JARVIS ha superado el tiempo máximo de espera de 18 segundos. No hace falta que resumas el mensaje: prueba de nuevo cuando el servicio esté estable.";
       }
       const networkFailure = error instanceof TypeError || /failed to fetch|networkerror|fetch failed/i.test(String(error?.message || ""));
       if (networkFailure && attempt === 0) {
