@@ -88,23 +88,31 @@ test("rechaza JSON válido cuyo nivel superior no sea un objeto", async () => {
   assert.equal(called, false);
 });
 
-test("utiliza Cloudflare cuando devuelve una respuesta válida", async () => {
+test("lanza ambos motores en paralelo y devuelve el primero que responde", async () => {
   const originalFetch = globalThis.fetch;
-  let fallbackCalled = false;
+  let geminiStarted = false;
   globalThis.fetch = async () => {
-    fallbackCalled = true;
-    throw new Error("Gemini no debería haberse llamado");
+    geminiStarted = true;
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: "Respuesta Gemini" }] } }]
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
   };
   try {
     const response = await worker.fetch(
       makeRequest({ messages: validMessages }),
-      { AI: { run: async () => ({ choices: [{ message: { content: "Respuesta principal" } }] }) } }
+      {
+        AI: { run: async () => {
+          assert.equal(geminiStarted, true, "Gemini debe iniciarse antes de esperar a Cloudflare");
+          return { choices: [{ message: { content: "Respuesta Cloudflare" } }] };
+        } },
+        GEMINI_API_KEY: "test-only-secret"
+      }
     );
     const data = await response.json();
     assert.equal(response.status, 200);
     assert.equal(data.provider, "cloudflare");
-    assert.equal(data.reply, "Respuesta principal");
-    assert.equal(fallbackCalled, false);
+    assert.equal(data.reply, "Respuesta Cloudflare");
+    assert.equal(geminiStarted, true);
   } finally {
     globalThis.fetch = originalFetch;
   }
