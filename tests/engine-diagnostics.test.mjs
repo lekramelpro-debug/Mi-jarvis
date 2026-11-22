@@ -78,3 +78,17 @@ test("Gemini une las partes de texto con saltos de línea reales", async () => {
   const worker = await readFile(resolve(root, "worker.js"), "utf8");
   assert.match(worker, /\.join\("\\n"\)/);
 });
+
+
+test("la PWA usa caché versionada y estrategia network-first con fallback offline", async () => {
+  const [serviceWorker, html] = await Promise.all([
+    readFile(resolve(root, "service-worker.js"), "utf8"),
+    readFile(resolve(root, "index.html"), "utf8")
+  ]);
+  assert.match(serviceWorker, /jarvis-cache-v40/);
+  assert.match(serviceWorker, /fetch\(event\.request\)\.then/);
+  assert.match(serviceWorker, /caches\.match\(event\.request\)/);
+  assert.match(serviceWorker, /caches\.match\("\.\/index\.html"\)/);
+  assert.match(serviceWorker, /app\.js\?v=jarvis-40/);
+  assert.match(html, /app\.js\?v=jarvis-40/);
+});
