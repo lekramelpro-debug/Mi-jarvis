@@ -22,17 +22,17 @@ self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin) return;
 
-  // Network-first: refresh installed clients when online and keep a cache fallback.
+  // Network-first: refresh installed clients online and keep a reliable cache fallback.
+  const networkResponse = fetch(event.request);
+  const cacheUpdate = networkResponse.then(response => {
+    if (!response.ok) return;
+    return caches.open(CACHE_NAME).then(cache =>
+      cache.put(event.request, response.clone())
+    );
+  }).catch(() => {});
+  event.waitUntil(cacheUpdate);
   event.respondWith(
-    fetch(event.request).then(response => {
-      if (response.ok) {
-        const copy = response.clone();
-        caches.open(CACHE_NAME)
-          .then(cache => cache.put(event.request, copy))
-          .catch(() => {});
-      }
-      return response;
-    }).catch(async () => {
+    networkResponse.catch(async () => {
       const cached = await caches.match(event.request);
       if (cached) return cached;
       if (event.request.mode === "navigate") {
