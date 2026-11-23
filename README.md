@@ -74,6 +74,6 @@ La instalación PWA no convierte la web en una aplicación con control total del
 
 ## Aplicación complementaria Android
 
-Hay un proyecto Android inicial en [`android-companion/`](./android-companion/). Incluye accesos para abrir Chrome, ChatGPT y Claude: intenta abrir la app instalada y recurre a su web si no está disponible. No solicita permisos sensibles ni ejecuta acciones en segundo plano. Consulta su README para compilarlo con Android Studio y JDK 17. La compilación automática se comprueba mediante GitHub Actions; hasta que esa comprobación termine, el APK no debe considerarse validado.
+Hay un proyecto Android inicial en [`android-companion/`](./android-companion/). Incluye accesos para abrir Chrome, ChatGPT y Claude: intenta abrir la app instalada y recurre a su web si no está disponible. No solicita permisos sensibles ni ejecuta acciones en segundo plano. Consulta su README para compilarlo con Android Studio y JDK 17. GitHub Actions ya ha compilado correctamente el APK de depuración; todavía falta probar su instalación y las notificaciones en un dispositivo Android real.
 
 Esta primera versión no controla libremente el teléfono. Cualquier automatización futura deberá pedir autorización, usar permisos mínimos y revocables y mostrar lo que ha hecho. No se habilitarán llamadas automáticas ni control remoto oculto.
