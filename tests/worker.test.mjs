@@ -163,6 +163,68 @@ test("usa Gemini como respaldo, conserva los turnos y separa correctamente sus f
   }
 });
 
+test("reintenta una sola vez cuando Gemini devuelve un 503 rápido y recupera el servicio", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    if (calls === 1) {
+      return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: "Gemini recuperado" }] } }]
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  try {
+    const response = await worker.fetch(
+      makeRequest({ messages: validMessages }),
+      {
+        AI: { run: async () => { throw new Error("Cloudflare temporalmente no disponible"); } },
+        GEMINI_API_KEY: "test-only-secret"
+      }
+    );
+    const data = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(data.provider, "gemini");
+    assert.equal(data.reply, "Gemini recuperado");
+    assert.equal(calls, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("no reintenta errores Gemini 429 ni realiza llamadas adicionales", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  globalThis.fetch = async () => {
+    calls++;
+    return new Response(JSON.stringify({ error: { status: "RESOURCE_EXHAUSTED" } }), {
+      status: 429,
+      headers: { "Content-Type": "application/json" }
+    });
+  };
+
+  try {
+    const response = await worker.fetch(
+      makeRequest({ messages: validMessages }),
+      {
+        AI: { run: async () => { throw new Error("Cloudflare temporalmente no disponible"); } },
+        GEMINI_API_KEY: "test-only-secret"
+      }
+    );
+    const body = await response.text();
+    assert.equal(response.status, 502);
+    assert.equal(calls, 1);
+    assert.match(body, /Gemini: HTTP 429 \(RESOURCE_EXHAUSTED\)/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("devuelve un error controlado si ambos motores fallan y no filtra la clave", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(
