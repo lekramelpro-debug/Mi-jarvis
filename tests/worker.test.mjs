@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
-const worker = (await import(
+const workerModule = await import(
   "data:text/javascript;base64," + Buffer.from(source).toString("base64")
-)).default;
+);
+const worker = workerModule.default;
+const { providerDiagnostic } = workerModule;
 
 const ALLOWED_ORIGIN = "https://lekramelpro-debug.github.io";
 
@@ -164,7 +166,7 @@ test("usa Gemini como respaldo, conserva los turnos y separa correctamente sus f
 test("devuelve un error controlado si ambos motores fallan y no filtra la clave", async () => {
   const originalFetch = globalThis.fetch;
   globalThis.fetch = async () => new Response(
-    JSON.stringify({ error: { message: "servicio temporalmente no disponible" } }),
+    JSON.stringify({ error: { message: "private-gemini-error", status: "RESOURCE_EXHAUSTED" } }),
     { status: 503, headers: { "Content-Type": "application/json" } }
   );
   try {
@@ -178,7 +180,10 @@ test("devuelve un error controlado si ambos motores fallan y no filtra la clave"
     const body = await response.text();
     assert.equal(response.status, 502);
     assert.match(body, /ninguno de sus dos motores/);
-    assert.doesNotMatch(body, /test-only-secret/);
+    assert.match(body, /Cloudflare: error no clasificado/);
+    assert.match(body, /Gemini: HTTP 503 \(RESOURCE_EXHAUSTED\)/);
+    assert.doesNotMatch(body, /test-only-secret|private-cloudflare-error|private-gemini-error/);
+    assert.doesNotMatch(body, /cloudflareError|geminiError/);
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -308,4 +313,66 @@ test("evita sobrescribir memoria si otro dispositivo ya guardó una versión nue
   );
   assert.equal(current.status, 200);
   assert.equal(writes, 2);
+});
+
+test("no inicia Gemini mientras Cloudflare sigue respondiendo", async () => {
+  const originalFetch = globalThis.fetch;
+  let geminiStarted = false;
+  globalThis.fetch = async () => {
+    geminiStarted = true;
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: "Respuesta Gemini" }] } }]
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  try {
+    const response = await worker.fetch(
+      makeRequest({ messages: validMessages }),
+      {
+        AI: { run: async () => {
+          await new Promise(resolve => setTimeout(resolve, 1350));
+          return { choices: [{ message: { content: "Respuesta Cloudflare" } }] };
+        } },
+        GEMINI_API_KEY: "test-only-secret"
+      }
+    );
+    const data = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(data.provider, "cloudflare");
+    assert.equal(geminiStarted, false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("clasifica fallos de proveedor sin revelar mensajes internos", () => {
+  assert.equal(
+    providerDiagnostic("Gemini", "Gemini HTTP 429 (RESOURCE_EXHAUSTED)"),
+    "Gemini: HTTP 429 (RESOURCE_EXHAUSTED)"
+  );
+  assert.equal(
+    providerDiagnostic("Cloudflare", "Cloudflare AI ha superado el tiempo máximo de espera."),
+    "Cloudflare: tiempo de espera agotado"
+  );
+  const hidden = providerDiagnostic("Gemini", "internal request details: key=private-value");
+  assert.equal(hidden, "Gemini: error no clasificado (detalles ocultos)");
+  assert.doesNotMatch(hidden, /private-value/);
+});
+
+test("el Worker coincide con el endpoint y mantiene D1 Preview separada", async () => {
+  const [app, wrangler] = await Promise.all([
+    readFile(new URL("../app.js", import.meta.url), "utf8"),
+    readFile(new URL("../wrangler.toml", import.meta.url), "utf8")
+  ]);
+  const endpoint = app.match(/const AI_ENDPOINT = "https:\/\/([^/]+)\.workers\.dev";/);
+  const workerName = wrangler.match(/^name\s*=\s*"([^"]+)"/m);
+  const productionId = wrangler.match(/^database_id\s*=\s*"([^"]+)"/m);
+  const previewSection = wrangler.match(/\[\[previews\.d1_databases\]\]([\s\S]*)/);
+  const previewId = previewSection?.[1].match(/^database_id\s*=\s*"([^"]+)"/m);
+  assert.ok(endpoint, "Falta AI_ENDPOINT en app.js");
+  assert.ok(workerName, "Falta el nombre del Worker en wrangler.toml");
+  assert.equal(workerName[1], endpoint[1].split(".")[0]);
+  assert.ok(productionId && previewId, "Faltan los bindings D1 de producción o Preview");
+  assert.notEqual(previewId[1], productionId[1], "Preview no debe usar la D1 de producción");
+  assert.match(wrangler, /database_name\s*=\s*"jarvis-memory-preview"/);
 });
