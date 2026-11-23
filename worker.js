@@ -154,7 +154,7 @@ async function handleSync(request, env, body, origin) {
 }
 
 const GEMINI_MODEL = "gemini-3.8-flash";
-const AI_TIMEOUT_MS = 10000;
+const AI_TIMEOUT_MS = 15000;
 
 export function providerDiagnostic(provider, error) {
   const label = provider === "Cloudflare" ? "Cloudflare" : provider === "Gemini" ? "Gemini" : "Motor";
