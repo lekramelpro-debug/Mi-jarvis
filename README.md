@@ -5,7 +5,7 @@ Aplicación web personal en español para móvil y ordenador.
 ## Funciones
 
 - Chat con doble motor de IA: Cloudflare Workers AI como principal y Gemini como respaldo automático si Cloudflare falla o no devuelve texto.
-- Gemini solo se invoca después de que Cloudflare falle o agote el tiempo de espera; no se lanzan ambos motores en paralelo para evitar consumo duplicado.
+- Gemini solo se inicia cuando Cloudflare falla o alcanza el timeout; no se lanza una segunda petición solo porque Cloudflare tarde más de 1,2 s. Esto reduce el riesgo de consumo duplicado, aunque el timeout del Worker no confirma la cancelación interna de una petición ya iniciada.
 - Las claves de ambos proveedores se mantienen como secretos del Worker; nunca se exponen al navegador.
 - Reconocimiento de voz y respuestas habladas con selección de una voz instalada en cada dispositivo, más ajustes de velocidad y tono.
 - Memoria de notas y tareas guardada localmente.
