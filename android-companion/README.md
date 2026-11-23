@@ -21,4 +21,4 @@ Abre esta carpeta en Android Studio con JDK 17 y deja que Gradle sincronice el p
 
 Paquete: `com.jarvis.companion`
 
-La compilación debe verificarse en GitHub Actions antes de instalar el APK.
+La compilación de depuración ya se ha verificado en GitHub Actions. Antes de considerar la app lista, instala el APK en un dispositivo Android de prueba y comprueba permisos, reinicio y recepción de notificaciones.
