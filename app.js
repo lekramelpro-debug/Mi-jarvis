@@ -435,6 +435,7 @@ function buildCalendarIntent(title, startDate) {
 }
 
 const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
+const AI_REQUEST_TIMEOUT_MS = 23000;
 
 function syncRecordKey(item, kind) {
   if (item.id) return String(item.id);
@@ -611,7 +612,7 @@ async function askJarvis(text) {
   });
   for (let attempt = 0; attempt < 2; attempt++) {
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 18000);
+    const timeoutId = window.setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
     try {
       const response = await fetch(AI_ENDPOINT, {
         method: "POST",
