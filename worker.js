@@ -154,13 +154,15 @@ async function handleSync(request, env, body, origin) {
 }
 
 const GEMINI_MODEL = "gemini-3.8-flash";
+const GEMINI_FALLBACK_MODEL = "gemini-3.5-flash-lite";
 const AI_TIMEOUT_MS = 15000;
 const GEMINI_RETRY_TIMEOUT_MS = 6000;
 const GEMINI_RETRY_WINDOW_MS = 2500;
 const GEMINI_RETRY_DELAY_MS = 350;
+const GEMINI_FALLBACK_TIMEOUT_MS = 3000;
 
 export function providerDiagnostic(provider, error) {
-  const label = provider === "Cloudflare" ? "Cloudflare" : provider === "Gemini" ? "Gemini" : "Motor";
+  const label = provider === "Cloudflare" ? "Cloudflare" : provider === "Gemini" ? "Gemini" : provider === "Gemini Flash-Lite" ? "Gemini Flash-Lite" : "Motor";
   const message = typeof error === "string"
     ? error
     : String(error?.message || error || "");
@@ -209,7 +211,7 @@ async function askCloudflare(env, messages) {
   return reply.trim();
 }
 
-async function askGemini(env, messages) {
+async function askGemini(env, messages, model = GEMINI_MODEL, timeoutMs = AI_TIMEOUT_MS, allowRetry = true) {
   if (typeof env.GEMINI_API_KEY !== "string" || !env.GEMINI_API_KEY.trim()) {
     throw new Error("Gemini no está configurado: falta el secreto GEMINI_API_KEY.");
   }
@@ -223,7 +225,7 @@ async function askGemini(env, messages) {
     }));
 
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" +
-    encodeURIComponent(GEMINI_MODEL) + ":generateContent";
+    encodeURIComponent(model) + ":generateContent";
   const options = {
     method: "POST",
     headers: {
@@ -238,14 +240,14 @@ async function askGemini(env, messages) {
   };
 
   const firstAttemptAt = Date.now();
-  let response = await withTimeout(fetch(url, options), AI_TIMEOUT_MS, "Gemini");
+  let response = await withTimeout(fetch(url, options), timeoutMs, model === GEMINI_MODEL ? "Gemini" : "Gemini Flash-Lite");
   let data = await response.json().catch(() => ({}));
 
   // Un 5xx rápido suele ser transitorio. Solo hacemos un reintento breve
   // si aún queda margen dentro del timeout global del navegador (33 s).
   const transientStatus = [500, 502, 503, 504].includes(response.status);
   const firstAttemptWasQuick = Date.now() - firstAttemptAt <= GEMINI_RETRY_WINDOW_MS;
-  if (!response.ok && transientStatus && firstAttemptWasQuick) {
+  if (allowRetry && !response.ok && transientStatus && firstAttemptWasQuick) {
     await new Promise(resolve => setTimeout(resolve, GEMINI_RETRY_DELAY_MS));
     response = await withTimeout(
       fetch(url, options),
@@ -259,7 +261,7 @@ async function askGemini(env, messages) {
     const safeCode = typeof data.error?.status === "string" && /^[A-Z_]{2,40}$/.test(data.error.status)
       ? " (" + data.error.status + ")"
       : "";
-    throw new Error("Gemini HTTP " + response.status + safeCode);
+    throw new Error((model === GEMINI_MODEL ? "Gemini" : "Gemini Flash-Lite") + " HTTP " + response.status + safeCode);
   }
 
   const reply = (data.candidates?.[0]?.content?.parts || [])
@@ -268,7 +270,7 @@ async function askGemini(env, messages) {
     .join("\n")
     .trim();
 
-  if (!reply) throw new Error("Gemini no ha devuelto texto.");
+  if (!reply) throw new Error((model === GEMINI_MODEL ? "Gemini" : "Gemini Flash-Lite") + " no ha devuelto texto.");
   return reply;
 }
 
@@ -381,18 +383,47 @@ export default {
       cloudflareError = error;
     }
 
+    let geminiError;
     try {
       const reply = await askGemini(env, messages);
       return json({ ok: true, reply, provider: "gemini", fallback: true }, 200, origin);
-    } catch (geminiError) {
-      const detail = [
-        providerDiagnostic("Cloudflare", cloudflareError),
-        providerDiagnostic("Gemini", geminiError)
-      ].join(" · ");
-      return json({
-        error: "JARVIS no ha podido obtener respuesta de ninguno de sus dos motores. Comprueba su disponibilidad e inténtalo de nuevo.",
-        detail
-      }, 502, origin);
+    } catch (error) {
+      geminiError = error;
     }
+
+    // Si Gemini principal sigue devolviendo un 5xx, prueba una vez el modelo
+    // Flash-Lite como respaldo. No se activa ante 429, errores de clave ni timeouts.
+    const geminiStatus = String(geminiError?.message || "").match(/Gemini HTTP (500|502|503|504)\\b/);
+    if (geminiStatus) {
+      try {
+        const reply = await askGemini(
+          env,
+          messages,
+          GEMINI_FALLBACK_MODEL,
+          GEMINI_FALLBACK_TIMEOUT_MS,
+          false
+        );
+        return json({ ok: true, reply, provider: "gemini-flash-lite", fallback: true }, 200, origin);
+      } catch (fallbackError) {
+        const detail = [
+          providerDiagnostic("Cloudflare", cloudflareError),
+          providerDiagnostic("Gemini", geminiError),
+          providerDiagnostic("Gemini Flash-Lite", fallbackError)
+        ].join(" · ");
+        return json({
+          error: "JARVIS no ha podido obtener respuesta de ninguno de sus motores. Comprueba su disponibilidad e inténtalo de nuevo.",
+          detail
+        }, 502, origin);
+      }
+    }
+
+    const detail = [
+      providerDiagnostic("Cloudflare", cloudflareError),
+      providerDiagnostic("Gemini", geminiError)
+    ].join(" · ");
+    return json({
+      error: "JARVIS no ha podido obtener respuesta de ninguno de sus dos motores. Comprueba su disponibilidad e inténtalo de nuevo.",
+      detail
+    }, 502, origin);
   }
 };
