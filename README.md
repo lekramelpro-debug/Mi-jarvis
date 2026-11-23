@@ -5,6 +5,8 @@ Aplicación web personal en español para móvil y ordenador.
 ## Funciones
 
 - Chat con doble motor de IA: Cloudflare Workers AI como principal y Gemini como respaldo automático si Cloudflare falla o no devuelve texto.
+- Gemini solo se inicia cuando Cloudflare falla o alcanza el timeout; no se lanza una segunda petición solo porque Cloudflare tarde más de 1,2 s. Esto reduce el riesgo de consumo duplicado, aunque el timeout del Worker no confirma la cancelación interna de una petición ya iniciada.
+- Cada motor dispone de hasta 15 segundos en secuencia y el navegador espera 33 segundos en total; así no cancela el respaldo Gemini antes de que termine su ventana de respuesta.
 - Las claves de ambos proveedores se mantienen como secretos del Worker; nunca se exponen al navegador.
 - Reconocimiento de voz y respuestas habladas con selección de una voz instalada en cada dispositivo, más ajustes de velocidad y tono.
 - Memoria de notas y tareas guardada localmente.
@@ -44,6 +46,8 @@ La tabla `jarvis_vault` se crea automáticamente la primera vez que se usa la si
 
 La clave se guarda en el almacenamiento local del navegador y se envía al Worker únicamente en la petición de sincronización. No se añade al repositorio ni se envía al modelo de IA.
 
+Cada guardado de memoria incluye la versión que el dispositivo acaba de leer. D1 solo acepta la escritura si esa versión sigue siendo la actual. Si dos dispositivos intentan guardar a la vez, el segundo recibe un conflicto, vuelve a descargar la memoria, combina las notas y tareas por identificador y fecha de actualización y reintenta una vez. Esto evita que una escritura atrasada sustituya silenciosamente una versión más reciente.
+
 Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz permanecen locales. La selección de voz, velocidad y tono debe configurarse por separado en cada dispositivo porque las voces disponibles dependen del sistema y del navegador.
 
 ## Privacidad y límites
@@ -56,3 +60,21 @@ Las notas y tareas se sincronizan; el historial del chat y los ajustes de voz pe
 - El uso de Workers AI y Gemini puede estar sujeto a cuotas o cargos según el plan y el consumo. La aplicación no tiene un límite automático de gasto; revisa el uso y la facturación con un adulto responsable antes de utilizarla de forma continuada.
 - La investigación abre búsquedas web y no lee automáticamente páginas.
 - La página no puede controlar libremente otras aplicaciones ni leer archivos privados del dispositivo.
+
+## Instalar JARVIS en Android
+
+JARVIS es una PWA. Para crear un acceso directo:
+1. Abre la dirección HTTPS publicada de JARVIS en Chrome para Android.
+2. Abre el menú de tres puntos (⋮).
+3. Selecciona **Instalar aplicación** o **Añadir a pantalla de inicio** y confirma.
+4. Abre JARVIS desde el nuevo icono.
+
+En Samsung Internet, abre el menú del navegador y busca **Añadir página a → Pantalla Inicio**. El texto exacto puede variar según la versión del navegador. Si aparece el botón **Instalar** dentro de JARVIS, también puedes usarlo; si el navegador no ofrece instalación automática, el botón muestra los pasos manuales.
+
+La instalación PWA no convierte la web en una aplicación con control total del teléfono. El navegador solo permite funciones expresamente autorizadas, como notificaciones, voz o abrir enlaces. JARVIS no puede leer libremente otras aplicaciones, activar el micrófono en segundo plano ni realizar llamadas telefónicas por sí solo.
+
+## Aplicación complementaria Android
+
+Hay un proyecto Android inicial en [`android-companion/`](./android-companion/). Incluye accesos para abrir Chrome, ChatGPT y Claude: intenta abrir la app instalada y recurre a su web si no está disponible. No solicita permisos sensibles ni ejecuta acciones en segundo plano. Consulta su README para compilarlo con Android Studio y JDK 17. GitHub Actions ya ha compilado correctamente el APK de depuración; todavía falta probar su instalación y las notificaciones en un dispositivo Android real.
+
+Esta primera versión no controla libremente el teléfono. Cualquier automatización futura deberá pedir autorización, usar permisos mínimos y revocables y mostrar lo que ha hecho. No se habilitarán llamadas automáticas ni control remoto oculto.
