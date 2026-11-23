@@ -26,3 +26,13 @@ test("la página y el service worker usan la misma versión de caché", () => {
   assert.equal(cacheVersion, htmlVersion);
   assert.equal(workerAppVersion, htmlVersion);
 });
+
+test("actualiza la PWA desde la red y conserva fallback cuando no hay conexión", () => {
+  const networkFetch = serviceWorker.indexOf("fetch(event.request)");
+  const cacheFallback = serviceWorker.indexOf("caches.match(event.request)");
+  assert.ok(networkFetch >= 0, "Falta la petición de red");
+  assert.ok(cacheFallback > networkFetch, "La caché debe consultarse después de fallar la red");
+  assert.match(serviceWorker, /\.catch\(async \(\) =>/);
+  assert.match(serviceWorker, /event\.request\.mode === "navigate"/);
+  assert.match(serviceWorker, /caches\.match\("\.\/index\.html"\)/);
+});
