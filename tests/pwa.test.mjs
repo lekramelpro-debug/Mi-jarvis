@@ -36,3 +36,13 @@ test("actualiza la PWA desde la red y conserva fallback cuando no hay conexión"
   assert.match(serviceWorker, /event\.request\.mode === "navigate"/);
   assert.match(serviceWorker, /caches\.match\("\.\/index\.html"\)/);
 });
+
+test("mantiene viva la actualización de caché sin retrasar la respuesta de red", () => {
+  assert.match(serviceWorker, /const networkResponse = fetch\(event\.request\)/);
+  assert.match(serviceWorker, /const cacheUpdate = networkResponse\.then/);
+  const waitUntil = serviceWorker.indexOf("event.waitUntil(cacheUpdate)");
+  const respondWith = serviceWorker.indexOf("event.respondWith(", waitUntil);
+  assert.ok(waitUntil >= 0, "La escritura de caché debe prolongar el evento de forma controlada");
+  assert.ok(respondWith > waitUntil, "waitUntil debe registrarse sincrónicamente antes de responder");
+  assert.match(serviceWorker, /networkResponse\.catch\(async \(\) =>/);
+});
