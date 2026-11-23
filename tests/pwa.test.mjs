@@ -46,3 +46,13 @@ test("mantiene viva la actualización de caché sin retrasar la respuesta de red
   assert.ok(respondWith > waitUntil, "waitUntil debe registrarse sincrónicamente antes de responder");
   assert.match(serviceWorker, /networkResponse\.catch\(async \(\) =>/);
 });
+
+test("espera a la caché y a clients.claim antes de completar el ciclo de vida", () => {
+  const installStart = serviceWorker.indexOf('self.addEventListener("install"');
+  const activateStart = serviceWorker.indexOf('self.addEventListener("activate"');
+  const fetchStart = serviceWorker.indexOf('self.addEventListener("fetch"');
+  const installBlock = serviceWorker.slice(installStart, activateStart);
+  const activateBlock = serviceWorker.slice(activateStart, fetchStart);
+  assert.match(installBlock, /event\.waitUntil\([\s\S]*?self\.skipWaiting\(\)/);
+  assert.match(activateBlock, /event\.waitUntil\([\s\S]*?self\.clients\.claim\(\)/);
+});
