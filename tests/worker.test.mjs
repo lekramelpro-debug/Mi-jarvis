@@ -379,13 +379,13 @@ test("el Worker coincide con el endpoint y mantiene D1 Preview separada", async 
 
 test("el cliente deja completar ambos intentos secuenciales de IA", async () => {
   const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
-  const clientBudget = Number(app.match(/const AI_REQUEST_TIMEOUT_MS = (\\d+);/)?.[1]);
-  const workerBudget = Number(source.match(/const AI_TIMEOUT_MS = (\\d+);/)?.[1]);
+  const clientBudget = Number(app.match(/const AI_REQUEST_TIMEOUT_MS = (\d+);/)?.[1]);
+  const workerBudget = Number(source.match(/const AI_TIMEOUT_MS = (\d+);/)?.[1]);
   assert.ok(Number.isFinite(clientBudget), "Falta el timeout global del navegador");
   assert.ok(Number.isFinite(workerBudget), "Falta el timeout por proveedor del Worker");
   assert.ok(
     clientBudget >= workerBudget * 2 + 2000,
     "El navegador no debe cancelar la petición antes de que Cloudflare y Gemini terminen sus ventanas"
   );
-  assert.match(app, /window\\.setTimeout\\(\\(\\) => controller\\.abort\\(\\), AI_REQUEST_TIMEOUT_MS\\)/);
+  assert.match(app, /window\.setTimeout\(\(\) => controller\.abort\(\), AI_REQUEST_TIMEOUT_MS\)/);
 });
