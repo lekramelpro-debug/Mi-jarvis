@@ -393,7 +393,7 @@ export default {
 
     // Si Gemini principal sigue devolviendo un 5xx, prueba una vez el modelo
     // Flash-Lite como respaldo. No se activa ante 429, errores de clave ni timeouts.
-    const geminiStatus = String(geminiError?.message || "").match(/Gemini HTTP (500|502|503|504)\\b/);
+    const geminiStatus = String(geminiError?.message || "").match(/Gemini HTTP (500|502|503|504)\b/);
     if (geminiStatus) {
       try {
         const reply = await askGemini(
