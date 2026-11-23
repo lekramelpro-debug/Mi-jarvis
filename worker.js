@@ -155,6 +155,9 @@ async function handleSync(request, env, body, origin) {
 
 const GEMINI_MODEL = "gemini-3.8-flash";
 const AI_TIMEOUT_MS = 15000;
+const GEMINI_RETRY_TIMEOUT_MS = 6000;
+const GEMINI_RETRY_WINDOW_MS = 2500;
+const GEMINI_RETRY_DELAY_MS = 350;
 
 export function providerDiagnostic(provider, error) {
   const label = provider === "Cloudflare" ? "Cloudflare" : provider === "Gemini" ? "Gemini" : "Motor";
@@ -219,24 +222,39 @@ async function askGemini(env, messages) {
       parts: [{ text: message.content }]
     }));
 
-  const response = await withTimeout(fetch(
-    "https://generativelanguage.googleapis.com/v1beta/models/" +
-      encodeURIComponent(GEMINI_MODEL) + ":generateContent",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": env.GEMINI_API_KEY
-      },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents,
-        generationConfig: { maxOutputTokens: 1024, temperature: 0.65 }
-      })
-    }
-  ), AI_TIMEOUT_MS, "Gemini");
+  const url = "https://generativelanguage.googleapis.com/v1beta/models/" +
+    encodeURIComponent(GEMINI_MODEL) + ":generateContent";
+  const options = {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": env.GEMINI_API_KEY
+    },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents,
+      generationConfig: { maxOutputTokens: 1024, temperature: 0.65 }
+    })
+  };
 
-  const data = await response.json().catch(() => ({}));
+  const firstAttemptAt = Date.now();
+  let response = await withTimeout(fetch(url, options), AI_TIMEOUT_MS, "Gemini");
+  let data = await response.json().catch(() => ({}));
+
+  // Un 5xx rápido suele ser transitorio. Solo hacemos un reintento breve
+  // si aún queda margen dentro del timeout global del navegador (33 s).
+  const transientStatus = [500, 502, 503, 504].includes(response.status);
+  const firstAttemptWasQuick = Date.now() - firstAttemptAt <= GEMINI_RETRY_WINDOW_MS;
+  if (!response.ok && transientStatus && firstAttemptWasQuick) {
+    await new Promise(resolve => setTimeout(resolve, GEMINI_RETRY_DELAY_MS));
+    response = await withTimeout(
+      fetch(url, options),
+      GEMINI_RETRY_TIMEOUT_MS,
+      "Gemini (reintento)"
+    );
+    data = await response.json().catch(() => ({}));
+  }
+
   if (!response.ok) {
     const safeCode = typeof data.error?.status === "string" && /^[A-Z_]{2,40}$/.test(data.error.status)
       ? " (" + data.error.status + ")"
