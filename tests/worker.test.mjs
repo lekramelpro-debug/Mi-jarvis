@@ -197,6 +197,46 @@ test("reintenta una sola vez cuando Gemini devuelve un 503 rápido y recupera el
   }
 });
 
+
+test("usa Gemini 3.5 Flash-Lite si Gemini 3.8 sigue devolviendo 5xx", async () => {
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  const requestedModels = [];
+  globalThis.fetch = async url => {
+    calls++;
+    requestedModels.push(String(url));
+    if (calls <= 2) {
+      return new Response(JSON.stringify({ error: { status: "UNAVAILABLE" } }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    return new Response(JSON.stringify({
+      candidates: [{ content: { parts: [{ text: "Respuesta del respaldo Flash-Lite" }] } }]
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+
+  try {
+    const response = await worker.fetch(
+      makeRequest({ messages: validMessages }),
+      {
+        AI: { run: async () => { throw new Error("Cloudflare temporalmente no disponible"); } },
+        GEMINI_API_KEY: "test-only-secret"
+      }
+    );
+    const data = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(data.provider, "gemini-flash-lite");
+    assert.equal(data.reply, "Respuesta del respaldo Flash-Lite");
+    assert.equal(calls, 3);
+    assert.match(requestedModels[0], /gemini-3\.8-flash:generateContent/);
+    assert.match(requestedModels[1], /gemini-3\.8-flash:generateContent/);
+    assert.match(requestedModels[2], /gemini-3\.5-flash-lite:generateContent/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("no reintenta errores Gemini 429 ni realiza llamadas adicionales", async () => {
   const originalFetch = globalThis.fetch;
   let calls = 0;
