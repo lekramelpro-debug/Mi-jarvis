@@ -1,3 +1,5 @@
+import { providerDiagnostic } from "./engine-diagnostics.mjs";
+
 const ALLOWED_ORIGIN = "https://lekramelpro-debug.github.io";
 const MODEL = "@cf/zai-org/glm-4.7-flash";
 
@@ -180,16 +182,16 @@ async function askGemini(env, messages) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    const detail = typeof data.error?.message === "string"
-      ? data.error.message.slice(0, 220)
-      : "Error HTTP " + response.status;
-    throw new Error("Gemini no ha podido responder: " + detail);
+    const reason = typeof data.error?.status === "string" && /^[A-Z_]{2,40}$/.test(data.error.status)
+      ? " (" + data.error.status + ")"
+      : "";
+    throw new Error("Gemini HTTP " + response.status + reason);
   }
 
   const reply = (data.candidates?.[0]?.content?.parts || [])
     .map(part => typeof part.text === "string" ? part.text : "")
     .filter(Boolean)
-    .join("\\n")
+    .join("\n")
     .trim();
 
   if (!reply) throw new Error("Gemini no ha devuelto texto.");
@@ -296,10 +298,13 @@ export default {
       }, 200, origin);
     } catch (geminiError) {
       const detail = String(geminiError?.message || geminiError || "Error desconocido").slice(0, 240);
+      const diagnostic = [
+        providerDiagnostic("Cloudflare", cloudflareError),
+        providerDiagnostic("Gemini", geminiError)
+      ].join(" · ");
       return json({
         error: "JARVIS no ha podido obtener respuesta de ninguno de sus dos motores. Comprueba su disponibilidad e inténtalo de nuevo.",
-        cloudflareError,
-        geminiError: detail
+        detail: diagnostic
       }, 502, origin);
     }
   }
