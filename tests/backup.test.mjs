@@ -15,7 +15,7 @@ test("la copia de seguridad no incluye la clave privada de sincronización", () 
 });
 
 test("la copia de seguridad conserva los datos de progreso", () => {
-  const start = app.indexOf('$("#exportAll").addEventListener');
+  const start = app.indexOf('$("exportAll").addEventListener');
   const end = app.indexOf("\n});", start);
   assert.ok(start >= 0 && end > start, "No se ha encontrado la acción de exportación");
   const backup = app.slice(start, end);
