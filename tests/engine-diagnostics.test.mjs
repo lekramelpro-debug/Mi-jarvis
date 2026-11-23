@@ -111,6 +111,6 @@ test("la copia de seguridad conserva las áreas de progreso principales", async 
   assert.ok(start >= 0 && end > start, "No se ha encontrado la acción de exportación completa");
   const backup = app.slice(start, end);
   for (const field of ["businessTests", "dailySkillProgress", "futsalProgress", "futsalReviews", "weeklyReviews"]) {
-    assert.match(backup, new RegExp("\\b" + field + "\\s*:"));
+    assert.match(backup, new RegExp("(?:\\b" + field + "\\s*:|^\\s*" + field + "\\s*,)", "m"));
   }
 });
