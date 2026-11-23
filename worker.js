@@ -353,8 +353,8 @@ export default {
       return json({ error: "No se ha recibido un mensaje válido." }, 400, origin);
     }
 
-    // Mantiene Cloudflare como motor principal. Gemini solo se invoca si Cloudflare falla
-    // o agota su tiempo de espera, evitando peticiones paralelas y consumo duplicado.
+    // Mantiene Cloudflare como motor principal. Gemini no se inicia solo por una demora:
+    // espera a que Cloudflare falle o alcance el timeout, reduciendo el riesgo de consumo duplicado.
     let cloudflareError;
     try {
       const reply = await askCloudflare(env, messages);
