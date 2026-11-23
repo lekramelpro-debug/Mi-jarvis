@@ -435,7 +435,7 @@ function buildCalendarIntent(title, startDate) {
 }
 
 const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
-const AI_REQUEST_TIMEOUT_MS = 23000;
+const AI_REQUEST_TIMEOUT_MS = 33000;
 
 function syncRecordKey(item, kind) {
   if (item.id) return String(item.id);
