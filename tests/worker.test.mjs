@@ -281,9 +281,10 @@ test("devuelve un error controlado si ambos motores fallan y no filtra la clave"
     );
     const body = await response.text();
     assert.equal(response.status, 502);
-    assert.match(body, /ninguno de sus dos motores/);
+    assert.match(body, /ninguno de sus motores/);
     assert.match(body, /Cloudflare: error no clasificado/);
     assert.match(body, /Gemini: HTTP 503 \(RESOURCE_EXHAUSTED\)/);
+    assert.match(body, /Gemini Flash-Lite: HTTP 503 \(RESOURCE_EXHAUSTED\)/);
     assert.doesNotMatch(body, /test-only-secret|private-cloudflare-error|private-gemini-error/);
     assert.doesNotMatch(body, /cloudflareError|geminiError/);
   } finally {
