@@ -436,6 +436,7 @@ function buildCalendarIntent(title, startDate) {
 
 const AI_ENDPOINT = "https://mi-jarvis.lekramelpro.workers.dev";
 const AI_REQUEST_TIMEOUT_MS = 33000;
+const AI_REQUEST_TIMEOUT_SECONDS = Math.ceil(AI_REQUEST_TIMEOUT_MS / 1000);
 
 function syncRecordKey(item, kind) {
   if (item.id) return String(item.id);
@@ -640,7 +641,7 @@ async function askJarvis(text) {
       return data.reply.trim();
     } catch (error) {
       if (error?.name === "AbortError") {
-        return "JARVIS ha superado el tiempo máximo de espera de 18 segundos. No hace falta que resumas el mensaje: prueba de nuevo cuando el servicio esté estable.";
+        return `JARVIS ha superado el tiempo máximo de espera de ${AI_REQUEST_TIMEOUT_SECONDS} segundos. No hace falta que resumas el mensaje: prueba de nuevo cuando el servicio esté estable.`;
       }
       const networkFailure = error instanceof TypeError || /failed to fetch|networkerror|fetch failed/i.test(String(error?.message || ""));
       if (networkFailure && attempt === 0) {
