@@ -23,3 +23,15 @@ test("la copia de seguridad conserva los datos de progreso", () => {
     assert.match(backup, new RegExp("(?:\\b" + field + "\\s*:|^\\s*" + field + "\\s*,)", "m"));
   }
 });
+
+test("la importación rechaza copias grandes antes de leer o analizar el JSON", () => {
+  const start = app.indexOf('$("importFile").addEventListener');
+  const end = app.indexOf('$("searchForm").addEventListener', start);
+  assert.ok(start >= 0 && end > start, "No se ha encontrado el controlador de importación");
+  const handler = app.slice(start, end);
+  const sizeGuard = handler.indexOf("file.size > 5 * 1024 * 1024");
+  const fileRead = handler.indexOf("await file.text()");
+  const jsonParse = handler.indexOf("JSON.parse(");
+  assert.ok(sizeGuard >= 0, "Falta el límite de tamaño de la copia");
+  assert.ok(fileRead > sizeGuard && jsonParse > sizeGuard, "El tamaño debe comprobarse antes de leer y analizar el archivo");
+});
