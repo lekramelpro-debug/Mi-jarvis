@@ -856,6 +856,9 @@ $("importFile").addEventListener("change", async event => {
   const file = event.target.files?.[0];
   if (!file) return;
   try {
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error("La copia supera el tamaño máximo de 5 MB");
+    }
     const data = JSON.parse(await file.text());
     if (!data || !Array.isArray(data.notes) || !Array.isArray(data.tasks)) {
       throw new Error("Formato no válido");
