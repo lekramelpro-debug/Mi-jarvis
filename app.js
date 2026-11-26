@@ -471,6 +471,42 @@ function stableSyncRecords(items, kind) {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
+/*
+ * Guarda notas y tareas como una sola operación lógica.
+ * Si falla cualquiera de las escrituras, intenta restaurar ambos valores
+ * anteriores y evita enviar al servidor un estado local incompleto.
+ */
+function writeSyncSnapshot(notes, tasks) {
+  const entries = [
+    [KEYS.notes, notes],
+    [KEYS.tasks, tasks]
+  ];
+  const previous = [];
+
+  try {
+    for (const [key] of entries) previous.push([key, localStorage.getItem(key)]);
+  } catch {
+    return false;
+  }
+
+  try {
+    for (const [key, value] of entries) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+    return true;
+  } catch {
+    for (const [key, rawValue] of previous) {
+      try {
+        if (rawValue === null) localStorage.removeItem(key);
+        else localStorage.setItem(key, rawValue);
+      } catch {
+        // La restauración es de mejor esfuerzo; nunca ocultar el fallo original.
+      }
+    }
+    return false;
+  }
+}
+
 let syncInProgress = false;
 let syncPending = false;
 let syncPendingForcePush = false;
@@ -538,8 +574,9 @@ async function syncNow(silent = false, forcePush = true, conflictRetry = false) 
       JSON.stringify(stableSyncRecords(notes, "note")) !== JSON.stringify(stableSyncRecords(remoteNotes, "note")) ||
       JSON.stringify(stableSyncRecords(tasks, "task")) !== JSON.stringify(stableSyncRecords(remoteTasks, "task"));
 
-    write(KEYS.notes, notes);
-    write(KEYS.tasks, tasks);
+    if (!writeSyncSnapshot(notes, tasks)) {
+      throw new Error("No se han podido guardar las notas y tareas en este dispositivo. No se enviaron cambios al servidor; comprueba el espacio disponible y vuelve a intentarlo.");
+    }
     renderAll();
 
     if (forcePush || changedRemotely) {
