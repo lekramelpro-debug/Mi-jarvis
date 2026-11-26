@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const helperStart = app.indexOf("function writeSyncSnapshot(notes, tasks)");
-const helperEnd = app.indexOf("\\nlet syncInProgress", helperStart);
+const helperEnd = app.indexOf("\nlet syncInProgress", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "No se ha encontrado writeSyncSnapshot");
 const helperSource = app.slice(helperStart, helperEnd);
 
@@ -15,7 +15,7 @@ function runHelper(storage) {
     localStorage: storage,
     JSON
   };
-  vm.runInNewContext(helperSource + "\\nglobalThis.writeSyncSnapshot = writeSyncSnapshot;", context);
+  vm.runInNewContext(helperSource + "\nglobalThis.writeSyncSnapshot = writeSyncSnapshot;", context);
   return context.writeSyncSnapshot;
 }
 
@@ -84,7 +84,7 @@ test("no escribe nada si no puede leer la instantánea anterior", () => {
 
 test("no se envía la memoria al servidor si falla el guardado local", () => {
   const start = app.indexOf("async function syncNow(");
-  const end = app.indexOf("\\n\\nasync function askJarvis", start);
+  const end = app.indexOf("\n\nasync function askJarvis", start);
   assert.ok(start >= 0 && end > start, "No se ha encontrado syncNow");
   const sync = app.slice(start, end);
   const guard = sync.indexOf("if (!writeSyncSnapshot(notes, tasks))");
