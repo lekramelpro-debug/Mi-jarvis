@@ -305,6 +305,21 @@ test("rechaza la sincronización cuando el token no coincide", async () => {
   assert.equal(databaseTouched, false);
 });
 
+
+test("rechaza mensajes individuales de más de 20.000 caracteres antes de llamar a las IA", async () => {
+  let called = false;
+  const response = await worker.fetch(
+    makeRequest({ messages: [{ role: "user", text: "x".repeat(20001) }] }),
+    {
+      AI: { run: async () => { called = true; return { choices: [{ message: { content: "No debería ejecutarse" } }] }; } },
+      GEMINI_API_KEY: "test-only-secret"
+    }
+  );
+  assert.equal(response.status, 400);
+  assert.match((await response.json()).error, /mensaje no válido/);
+  assert.equal(called, false);
+});
+
 test("rechaza solicitudes cuyo Content-Length supera el límite", async () => {
   const response = await worker.fetch(
     makeRequest({ messages: validMessages }, { contentLength: 450001 }),
