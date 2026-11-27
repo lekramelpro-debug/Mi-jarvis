@@ -324,7 +324,8 @@ export default {
       Array.isArray(item) ||
       !["user", "model", "assistant"].includes(item.role) ||
       typeof item.text !== "string" ||
-      !item.text.trim()
+      !item.text.trim() ||
+      item.text.length > 20000
     );
     if (hasInvalidMessage) {
       return json({ error: "La conversación contiene un mensaje no válido." }, 400, origin);
